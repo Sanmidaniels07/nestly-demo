@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 
 import { resetDB } from "../db";
 import { hardNavigate } from "../navigate";
-import { PERSONAS, setPersonaUserId, type PersonaKey } from "../persona";
+import { PERSONAS, setPersonaUserId, usePersonaChoices, type PersonaKey } from "../persona";
 import { offerStoriesFor } from "../tour/tour-layer";
 
 const FLOATERS = [
@@ -27,7 +27,6 @@ const CHIPS = [
   { icon: Radio, text: "Bisi is live · 214 watching", x: "12%", y: "88%", d: 3, tone: "bg-rose-400/15 text-rose-100 ring-rose-300/25" },
 ];
 
-const ORDER: PersonaKey[] = ["seller", "buyer", "admin"];
 const ACCENT: Record<PersonaKey, string> = {
   seller: "from-amber-400 via-orange-500 to-fuchsia-600",
   buyer: "from-pink-400 via-fuchsia-500 to-violet-600",
@@ -97,6 +96,7 @@ function PersonaCard({ k, index, onPick, picked }: { k: PersonaKey; index: numbe
 
 export default function StartPage() {
   const [picked, setPicked] = useState<PersonaKey | null>(null);
+  const choices = usePersonaChoices();
   const [counter, setCounter] = useState(0);
 
   // A live counter, so the stage feels busy from the first second.
@@ -204,8 +204,8 @@ export default function StartPage() {
           </motion.div>
         </div>
 
-        <div className="mx-auto mt-12 grid w-full max-w-5xl gap-4 sm:grid-cols-3 sm:gap-5">
-          {ORDER.map((k, i) => (
+        <div className={`mx-auto mt-12 grid w-full gap-4 sm:gap-5 ${choices.length === 3 ? "max-w-5xl sm:grid-cols-3" : "max-w-3xl sm:grid-cols-2"}`}>
+          {choices.map((k, i) => (
             <PersonaCard key={k} k={k} index={i} onPick={pick} picked={picked} />
           ))}
         </div>

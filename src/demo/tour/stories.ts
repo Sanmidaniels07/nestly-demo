@@ -154,7 +154,7 @@ const buyerShopSafely: Story = {
       target: { text: /^Add to cart$/ },
       advance: "click",
       title: "Looks good - add to cart",
-      body: "The shop is verified, has real reviews and a track record. Tap Add to cart.",
+      body: "The shop is verified and has real reviews. Every new shop on Nestly is checked by a person before it can take big orders. Tap Add to cart.",
     },
     {
       path: "/marketplace/cart",

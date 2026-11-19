@@ -6,13 +6,17 @@ A sandbox of [Nestly](https://www.nestlyapp.site) that anyone can try in their b
 
 ## What visitors see
 
-- **Start screen** (`/`): an animated stage. Pick Tola (seller), Ada (shopper) or Yusuf (admin). The chosen card grows into the app.
+- **Start screen** (`/`): an animated stage. Pick Tola (seller) or Ada (shopper). The chosen card grows into the app.
 - **Guided stories**, told by the characters with a moving spotlight, speech bubbles, live activity cards and confetti:
   - *From a DM to a paid order* (Tola): a payment link, Kunle pays, shipping, the delivery code, earnings.
   - *Shop safely, then chip in* (Ada): add to cart, checkout, the demo payment sheet, then chipping in on Tolu's birthday cake.
-  - *Keep Nestly safe* (Yusuf): reviewing a brand-new quick-start shop.
+  - *Keep Nestly safe* (Yusuf, the admin): reviewing a brand-new quick-start shop. **Partners only** - see below.
 - **Free roam**: every screen works and keeps changes until "Reset demo". Messages get typed replies, paid orders are prepared and shipped on their own, and new orders, payments and deliveries slide in as cards.
 - **Demo button** (bottom of every screen): switch character, play a story, reset, or go back to the start.
+
+## Admin (partners only)
+
+Yusuf, the admin character, is hidden from the public demo: his story shows how Nestly's safety checks work (new-shop review, limits, held payouts, fraud stops), which buyers and sellers don't need and fraudsters shouldn't see. For investor and partner pitches, share **https://demo.nestlyapp.site/?for=partners** - the browser remembers it; `?for=public` switches back.
 
 ## How it works
 

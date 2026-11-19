@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 // Who the visitor is playing: a buyer, a seller or the admin. Chosen on the
 // demo's start screen and kept in this browser (it replaces logging in).
 
@@ -55,3 +57,31 @@ export const userIdFromToken = (header?: string | null) => {
   const token = (header ?? "").replace(/^Bearer\s+/i, "");
   return token.startsWith("demo.") ? token.slice(5) : null;
 };
+
+// The admin character is for partner and investor pitches only, not the
+// public demo: it shows how Nestly's safety checks work. Opened with
+// ?for=partners (remembered in this browser); ?for=public turns it off again.
+const PARTNERS_KEY = "nestly-demo:partners";
+
+export const isPartnersMode = (): boolean => {
+  if (typeof window === "undefined") return false;
+  try {
+    const param = new URLSearchParams(window.location.search).get("for");
+    if (param === "partners") localStorage.setItem(PARTNERS_KEY, "1");
+    if (param === "public") localStorage.removeItem(PARTNERS_KEY);
+    return localStorage.getItem(PARTNERS_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+const PUBLIC: PersonaKey[] = ["seller", "buyer"];
+const ALL: PersonaKey[] = ["seller", "buyer", "admin"];
+
+/** The characters this visitor can play (same list on the server and first paint). */
+export const usePersonaChoices = (): PersonaKey[] =>
+  useSyncExternalStore(
+    () => () => {},
+    () => (isPartnersMode() ? ALL : PUBLIC),
+    () => PUBLIC
+  );

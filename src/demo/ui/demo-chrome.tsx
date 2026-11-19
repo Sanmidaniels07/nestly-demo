@@ -11,7 +11,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { resetDB } from "../db";
 import { hardNavigate } from "../navigate";
-import { getPersonaUserId, PERSONAS, setPersonaUserId, type PersonaKey } from "../persona";
+import { getPersonaUserId, PERSONAS, setPersonaUserId, usePersonaChoices, type PersonaKey } from "../persona";
 import { writeTour } from "../tour/engine";
 import { STORIES } from "../tour/stories";
 import TourLayer from "../tour/tour-layer";
@@ -20,6 +20,7 @@ import ActivityToasts from "./activity-toasts";
 export default function DemoChrome() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const choices = usePersonaChoices();
   // Read from this browser; null while rendering on the server.
   const me = useSyncExternalStore(
     () => () => {},
@@ -71,8 +72,8 @@ export default function DemoChrome() {
             </div>
             <div className="p-3">
               <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-white/45">Play as</p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {(Object.keys(PERSONAS) as PersonaKey[]).map((k) => (
+              <div className={`mt-2 grid gap-2 ${choices.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+                {choices.map((k) => (
                   <motion.button
                     key={k}
                     type="button"
@@ -89,7 +90,7 @@ export default function DemoChrome() {
               </div>
               <p className="mt-4 px-1 text-[11px] font-semibold uppercase tracking-wider text-white/45">Guided stories</p>
               <div className="mt-2 space-y-1.5">
-                {STORIES.map((story) => (
+                {STORIES.filter((story) => choices.includes(story.persona)).map((story) => (
                   <button
                     key={story.id}
                     type="button"
