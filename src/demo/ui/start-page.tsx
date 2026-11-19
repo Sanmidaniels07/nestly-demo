@@ -87,7 +87,7 @@ function PersonaCard({ k, index, onPick, picked }: { k: PersonaKey; index: numbe
           </li>
         ))}
       </ul>
-      <span className="relative mt-6 inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-2xl bg-white text-[14px] font-bold text-[#1f1640] transition-transform group-hover:translate-x-0.5">
+      <span className="relative mt-6 flex h-11 w-full items-center justify-center gap-2 self-stretch whitespace-nowrap rounded-2xl bg-white px-5 text-[14px] font-bold text-[#1f1640] transition-transform group-hover:translate-x-0.5">
         Start as {p.name} <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
       </span>
     </motion.button>
