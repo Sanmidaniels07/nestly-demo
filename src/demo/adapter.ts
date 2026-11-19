@@ -7,6 +7,7 @@ import { AxiosError, type AxiosAdapter, type AxiosResponse, type InternalAxiosRe
 
 import { getDB, saveDB } from "./db";
 import { userIdFromToken } from "./persona";
+import { tick } from "./simulate";
 import { DemoError, match, paginate, type Reply } from "./router";
 import "./routes";
 
@@ -67,6 +68,8 @@ export const demoAdapter: AxiosAdapter = async (config) => {
   const { path, query } = toPath(config);
   const auth = (config.headers?.Authorization ?? config.headers?.authorization) as string | undefined;
   const db = getDB();
+  // Let the simulated world catch up (orders prepared/shipped, ...).
+  if (tick(db)) saveDB();
   const userId = userIdFromToken(auth);
   const user = userId ? db.users.find((u) => u.id === userId) ?? null : null;
 
