@@ -1,0 +1,40 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Bell } from "lucide-react";
+
+import { useUnreadNotificationsCount } from "@/src/hooks/use-unread-notifications-count";
+import { useAuth } from "@/src/hooks/use-auth";
+import NotificationsModal from "@/src/components/notifications/notifications-modal";
+
+export default function NotificationBell() {
+  const { isAuthenticated } = useAuth();
+  const { count } = useUnreadNotificationsCount({ enabled: isAuthenticated });
+  const [open, setOpen] = useState(false);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <>
+      <button
+        ref={buttonRef}
+        onClick={() => setOpen(true)}
+        aria-label="Notifications"
+        className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface transition-colors hover:border-violet-300 dark:hover:border-violet-500/40 hover:bg-surface-sunken"
+      >
+        <Bell size={19} className="text-ink-3" />
+
+        {count > 0 && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-1 text-[10px] font-bold text-white">
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </button>
+
+      <NotificationsModal
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={buttonRef}
+      />
+    </>
+  );
+}

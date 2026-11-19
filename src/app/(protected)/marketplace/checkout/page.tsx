@@ -1,0 +1,36 @@
+"use client";
+
+import CheckoutHeader from "./components/checkout-header";
+import CheckoutStepper from "./components/checkout-stepper";
+import CheckoutSummary from "./components/checkout-summary";
+import OrderItems from "./components/order-item";
+import ShippingAddress from "./components/shipping-address";
+import StoreShipping from "./components/store-shipping";
+import CouponSection from "./components/coupon-section";
+import SellerNotes from "./components/seller-notes";
+
+export default function CheckoutPage() {
+  return (
+    <div className="mx-auto max-w-7xl space-y-8 px-5 py-8">
+      <CheckoutHeader />
+
+      <CheckoutStepper step={2} />
+
+      <div className="grid gap-8 xl:grid-cols-[1.8fr_420px]">
+        <section className="min-w-0 space-y-6">
+          <ShippingAddress />
+
+          <OrderItems />
+
+          <StoreShipping />
+
+          <SellerNotes />
+
+          <CouponSection />
+        </section>
+
+        <CheckoutSummary />
+      </div>
+    </div>
+  );
+}

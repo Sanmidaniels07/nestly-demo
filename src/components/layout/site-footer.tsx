@@ -1,0 +1,45 @@
+import Link from "next/link";
+
+import NestlyMark from "@/src/components/ui/nestly-mark";
+import NestlyWordmark from "@/src/components/ui/nestly-wordmark";
+import CookieSettingsLink from "@/src/components/consent/cookie-settings-link";
+import { supportWhatsAppUrl } from "@/src/lib/support";
+import { LEGAL_COMPANY_NAME, LEGAL_RC_NUMBER } from "@/src/lib/legal";
+
+// The public site footer - homepage, features and preview pages.
+export default function SiteFooter() {
+  return (
+    <footer className="bg-[#1A1A2E] text-white py-20">
+      <div className="max-w-7xl mx-auto px-6 text-center">
+        <div className="flex items-center justify-center gap-3 mb-6">
+          <NestlyMark size={44} />
+          <NestlyWordmark as="div" size="text-3xl" color="text-white" />
+        </div>
+        <p className="text-white/60 max-w-md mx-auto">
+          Connect, Celebrate, Commerce — All in one place.
+        </p>{" "}
+        <nav className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-white/60">
+          <Link href="/guides/sellers" className="hover:text-white">Seller guide</Link>
+          <Link href="/guides/buyers" className="hover:text-white">Buyer guide</Link>
+          <Link href="/guides/community" className="hover:text-white">Getting started</Link>
+          <Link href="/terms" className="hover:text-white">Terms of Service</Link>
+          <Link href="/privacy" className="hover:text-white">Privacy Policy</Link>
+          <Link href="/seller-terms" className="hover:text-white">Seller Agreement</Link>
+          <CookieSettingsLink className="hover:text-white" />
+          <a href={supportWhatsAppUrl("Hi Nestly Support, ")} target="_blank" rel="noopener noreferrer" className="hover:text-white">
+            Support
+          </a>
+          <a href="https://www.instagram.com/thenestlyapp" target="_blank" rel="me noopener noreferrer" className="hover:text-white">
+            Instagram
+          </a>
+        </nav>
+        <div className="mt-8 space-y-1 text-xs text-white/40">
+          <p>© 2026 Nestly. All rights reserved.</p>
+          <p>
+            Nestly is operated by {LEGAL_COMPANY_NAME}, a company registered in Nigeria (RC {LEGAL_RC_NUMBER}).
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}

@@ -1,0 +1,109 @@
+"use client";
+
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+
+import { useNotificationPreferences } from "@/src/hooks/use-notification-preferences";
+import { useUpdateNotificationPreference } from "@/src/hooks/use-update-notification-preference";
+import { NotificationPreferenceType } from "@/src/types/notification";
+import CheckboxRow from "@/src/components/ui/checkbox-row";
+import PushSettings from "@/src/components/push/push-settings";
+
+const PREFERENCE_META: Record<
+  NotificationPreferenceType,
+  { label: string; description: string }
+> = {
+  LIKE: {
+    label: "Likes & reactions",
+    description: "When someone reacts to your posts or comments.",
+  },
+  COMMENT: {
+    label: "Comments & replies",
+    description: "When someone comments on your post or replies to you.",
+  },
+  FOLLOW: {
+    label: "New followers",
+    description: "When someone starts following you.",
+  },
+  MESSAGE: {
+    label: "Direct messages",
+    description: "When you receive a new message.",
+  },
+  ORDER: {
+    label: "Marketplace orders",
+    description: "Order status updates, shipping, and returns.",
+  },
+  SHOPPING: {
+    label: "Shopping updates",
+    description: "New products from stores you follow, items left in your cart, and things you asked about being back in stock. Includes emails.",
+  },
+  LIVE: {
+    label: "Live selling",
+    description: "When a store you follow announces a live, reminders for lives you asked about, and when they start. Includes emails.",
+  },
+  SYSTEM: {
+    label: "System announcements",
+    description: "Important updates about your account and Nestly.",
+  },
+};
+
+export default function SettingsNotificationsPage() {
+  const { data: preferences, isLoading } = useNotificationPreferences();
+  const { mutate: updatePreference, isPending } = useUpdateNotificationPreference();
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-[family-name:var(--font-fraunces)] text-[22px] text-ink">
+          Notifications
+        </h2>
+        <p className="mt-1 text-[13.5px] text-muted">
+          Control what you get notified about.
+        </p>
+      </div>
+
+      <Link
+        href="/notifications"
+        className="group flex items-center justify-between rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-violet-200 dark:hover:border-violet-500/30 hover:shadow-[0_12px_32px_-16px_rgba(124,58,237,0.2)]"
+      >
+        <div>
+          <h3 className="text-[14.5px] font-semibold text-ink">View all notifications</h3>
+          <p className="mt-0.5 text-[12.5px] text-muted">See what you&apos;ve missed.</p>
+        </div>
+        <ArrowRight size={17} className="text-faint transition-all group-hover:translate-x-0.5 group-hover:text-violet-600 dark:group-hover:text-violet-400" />
+      </Link>
+
+      <PushSettings />
+
+      <section className="rounded-2xl border border-line bg-surface p-6 sm:p-7">
+        <div>
+          <h3 className="text-[15px] font-semibold text-ink">Notify me about</h3>
+          <p className="mt-1 text-[13px] text-muted">
+            Choose which activity sends you a notification.
+          </p>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {isLoading ? (
+            <>
+              <div className="h-16 animate-pulse rounded-2xl bg-surface-2" />
+              <div className="h-16 animate-pulse rounded-2xl bg-surface-2" />
+              <div className="h-16 animate-pulse rounded-2xl bg-surface-2" />
+            </>
+          ) : (
+            preferences?.map((pref) => (
+              <CheckboxRow
+                key={pref.type}
+                label={PREFERENCE_META[pref.type].label}
+                description={PREFERENCE_META[pref.type].description}
+                checked={pref.enabled}
+                disabled={isPending}
+                onChange={(enabled) => updatePreference({ type: pref.type, enabled })}
+              />
+            ))
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

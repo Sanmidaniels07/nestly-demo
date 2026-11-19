@@ -1,0 +1,28 @@
+"use client";
+
+import Link from "next/link";
+import { ShoppingCart } from "lucide-react";
+
+import { useCart } from "@/src/hooks/use-cart";
+import { useAuth } from "@/src/hooks/use-auth";
+
+export default function CartButton() {
+  const { isAuthenticated } = useAuth();
+  const { data: items } = useCart({ enabled: isAuthenticated });
+  const totalItems = items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+
+  return (
+    <Link
+      href="/marketplace/cart"
+      className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface transition-colors hover:border-violet-300 dark:hover:border-violet-500/40 hover:bg-surface-sunken"
+    >
+      <ShoppingCart size={19} className="text-ink-3" />
+
+      {totalItems > 0 && (
+        <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-1 text-[10px] font-bold text-white">
+          {totalItems > 99 ? "99+" : totalItems}
+        </span>
+      )}
+    </Link>
+  );
+}

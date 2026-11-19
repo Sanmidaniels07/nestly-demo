@@ -1,0 +1,269 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { AlertCircle, CreditCard, Loader2 } from "lucide-react";
+import SummaryRow from "./summary-row";
+import { useCart } from "@/src/hooks/use-cart";
+import { sellersMissingDelivery, useCheckoutStore } from "@/src/store/checkout-store";
+import { useInitiateCheckout } from "@/src/hooks/use-initiate-checkout";
+import { useVerifyCheckout } from "@/src/hooks/use-verify-checkout";
+import { useSavedCards } from "@/src/hooks/use-saved-cards";
+import { useChargeSavedCard } from "@/src/hooks/use-charge-saved-card";
+import { payWithPaystack } from "@/src/lib/paystack";
+import { afterPaymentPath } from "@/src/lib/order-result";
+import { trafficSource } from "@/src/lib/traffic-source";
+import { Order } from "@/src/types/order";
+import { PHONE_PATTERN } from "@/src/lib/phone";
+
+function money(value: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+export default function PaymentSummary() {
+  const router = useRouter();
+  const { data: items } = useCart();
+  const addressId = useCheckoutStore((state) => state.addressId);
+  const shippingSelections = useCheckoutStore((state) => state.shippingSelections);
+  const sellerNotes = useCheckoutStore((state) => state.sellerNotes);
+  const deliveryPhone = useCheckoutStore((state) => state.deliveryPhone?.trim() || undefined);
+  const appliedCoupon = useCheckoutStore((state) => state.appliedCoupon);
+  const resetCheckout = useCheckoutStore((state) => state.resetCheckout);
+
+  const { mutateAsync: initiateCheckout } = useInitiateCheckout();
+  const { mutateAsync: verifyCheckout } = useVerifyCheckout();
+  const { mutateAsync: chargeSavedCard } = useChargeSavedCard();
+  const { data: savedCards } = useSavedCards();
+
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState("");
+  const [selectedCardId, setSelectedCardId] = useState<string>("new");
+  const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const attemptRef = useRef(0);
+
+  useEffect(() => {
+    const defaultCard = savedCards?.find((card) => card.isDefault) ?? savedCards?.[0];
+    if (defaultCard) setSelectedCardId(defaultCard.id);
+  }, [savedCards]);
+
+  // Once payment is confirmed the backend has already cleared the cart, so
+  // from that point on the confirmed order is the source of truth — not
+  // whatever `useCart()` returns (which would now read as empty/₦0).
+  const totalItems = confirmedOrder
+    ? confirmedOrder.items.length
+    : items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  const subtotal = confirmedOrder
+    ? confirmedOrder.subtotal ?? confirmedOrder.total
+    : items?.reduce((sum, item) => sum + (item.unitPrice ?? item.product.price) * item.quantity, 0) ?? 0;
+  const deliveryFee = confirmedOrder
+    ? confirmedOrder.deliveryFee ?? 0
+    : Object.values(shippingSelections).reduce((sum, selection) => sum + selection.fee, 0);
+  const discountAmount = confirmedOrder
+    ? confirmedOrder.discountAmount ?? 0
+    : appliedCoupon?.discountAmount ?? 0;
+  const estimatedTotal = confirmedOrder
+    ? confirmedOrder.total
+    : Math.max(0, subtotal - discountAmount + deliveryFee);
+
+  const shippingSelectionsArray = Object.entries(shippingSelections).map(
+    ([storeId, selection]) => ({ storeId, shippingOptionId: selection.shippingOptionId })
+  );
+  // Arrived without an address or a delivery choice for every seller (e.g.
+  // typed the URL, or reloaded and lost the choices) - the total here would
+  // leave out delivery, so go back and finish checkout first.
+  const incomplete = !!items && items.length > 0 && (!addressId || sellersMissingDelivery(items, shippingSelections).length > 0);
+  useEffect(() => {
+    if (incomplete && !confirmedOrder && !processing) router.replace("/marketplace/checkout");
+  }, [incomplete, confirmedOrder, processing, router]);
+
+  const sellerNotesArray = Object.entries(sellerNotes)
+    .map(([storeId, note]) => ({ storeId, note: note.trim() }))
+    .filter((entry) => entry.note);
+
+  const handlePay = async () => {
+    if (!addressId) {
+      setError("Select a delivery address on the checkout page first.");
+      return;
+    }
+    if (deliveryPhone && !PHONE_PATTERN.test(deliveryPhone)) {
+      setError("Check the phone number for delivery on the checkout page.");
+      return;
+    }
+
+    const attempt = ++attemptRef.current;
+    const isStale = () => attempt !== attemptRef.current;
+
+    setError("");
+    setConfirmedOrder(null);
+    setProcessing(true);
+
+    if (selectedCardId !== "new") {
+      try {
+        const response = await chargeSavedCard({
+          addressId,
+          savedCardId: selectedCardId,
+          shippingSelections: shippingSelectionsArray,
+          couponCode: appliedCoupon?.code,
+          sellerNotes: sellerNotesArray,
+          deliveryPhone,
+          source: trafficSource(),
+        });
+        const order = (response as { data: Order }).data;
+        if (isStale()) return;
+        setConfirmedOrder(order);
+        if (order.status !== "CANCELLED") resetCheckout();
+        router.push(afterPaymentPath(order));
+      } catch {
+        if (!isStale()) setProcessing(false);
+      }
+      return;
+    }
+
+    try {
+      const response = await initiateCheckout({
+        addressId,
+        shippingSelections: shippingSelectionsArray,
+        couponCode: appliedCoupon?.code,
+        sellerNotes: sellerNotesArray,
+        deliveryPhone,
+        source: trafficSource(),
+      });
+      const { accessCode, reference } = (response as { data: { accessCode: string; reference: string } }).data;
+
+      await payWithPaystack(accessCode, {
+        onSuccess: async () => {
+          try {
+            // The verify response's data is the order itself.
+            const { data: order } = await verifyCheckout(reference);
+            if (isStale()) return;
+            setConfirmedOrder(order);
+            if (order.status !== "CANCELLED") resetCheckout();
+            router.push(afterPaymentPath(order));
+          } catch {
+            if (!isStale()) {
+              setError("Payment was received but we couldn't confirm it. Check your orders page.");
+              setProcessing(false);
+            }
+          }
+        },
+        onCancel: () => {
+          if (!isStale()) setProcessing(false);
+        },
+        onError: (message) => {
+          if (!isStale()) {
+            setError(message || "Payment failed. Please try again.");
+            setProcessing(false);
+          }
+        },
+      });
+    } catch {
+      if (!isStale()) setProcessing(false);
+    }
+  };
+
+  return (
+    <aside className="space-y-5 rounded-2xl border border-line bg-surface p-6">
+      <h2 className="font-[family-name:var(--font-fraunces)] text-[20px] text-ink">
+        Payment summary
+      </h2>
+
+      {!!savedCards?.length && (
+        <div className="space-y-2">
+          <p className="text-[12.5px] font-medium text-ink-2">Pay with</p>
+          <div className="space-y-2">
+            {savedCards.map((card) => (
+              <button
+                key={card.id}
+                onClick={() => setSelectedCardId(card.id)}
+                className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                  selectedCardId === card.id
+                    ? "border-violet-400 bg-violet-50 dark:bg-violet-500/10"
+                    : "border-line hover:border-violet-200 dark:hover:border-violet-500/30"
+                }`}
+              >
+                <CreditCard size={16} className="shrink-0 text-muted" />
+                <span className="text-[13px] font-medium text-ink">
+                  {card.cardType ?? "Card"} •••• {card.last4}
+                </span>
+              </button>
+            ))}
+
+            <button
+              onClick={() => setSelectedCardId("new")}
+              className={`flex w-full items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
+                selectedCardId === "new"
+                  ? "border-violet-400 bg-violet-50 dark:bg-violet-500/10"
+                  : "border-line hover:border-violet-200 dark:hover:border-violet-500/30"
+              }`}
+            >
+              <CreditCard size={16} className="shrink-0 text-subtle" />
+              <span className="text-[13px] font-medium text-ink">Pay with a new card</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <SummaryRow label="Items" value={totalItems.toString()} />
+        <SummaryRow label="Subtotal" value={money(subtotal)} />
+        {deliveryFee > 0 && <SummaryRow label="Shipping" value={money(deliveryFee)} />}
+        {discountAmount > 0 && (
+          <SummaryRow label="Coupon discount" value={`-${money(discountAmount)}`} />
+        )}
+
+        <div className="border-t border-dashed border-line pt-3">
+          <SummaryRow
+            label={confirmedOrder ? "Amount paid" : "Amount to pay"}
+            value={money(estimatedTotal)}
+            bold
+          />
+        </div>
+
+        {!confirmedOrder && (
+          <p className="text-[11.5px] text-subtle">
+            The exact amount is confirmed by the server before payment.
+          </p>
+        )}
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-2 rounded-xl bg-red-50 dark:bg-red-500/10 p-3 text-[12.5px] text-red-600 dark:text-red-400">
+          <AlertCircle size={15} className="mt-0.5 shrink-0" />
+          {error}
+        </div>
+      )}
+
+      <button
+        onClick={handlePay}
+        disabled={processing || totalItems === 0}
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-3.5 text-[14px] font-semibold text-white transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70"
+      >
+        {processing ? (
+          <>
+            <Loader2 size={16} className="animate-spin" />
+            Processing payment...
+          </>
+        ) : (
+          `Pay ${money(estimatedTotal)}`
+        )}
+      </button>
+
+      <p className="mt-3 text-center text-[12px] leading-relaxed text-subtle">
+        By paying, you agree to Nestly&apos;s{" "}
+        <Link href="/terms" target="_blank" className="font-medium text-violet-600 hover:underline dark:text-violet-400">
+          Terms of Service
+        </Link>
+        , including our{" "}
+        <Link href="/terms#returns" target="_blank" className="font-medium text-violet-600 hover:underline dark:text-violet-400">
+          returns &amp; refunds
+        </Link>{" "}
+        policy.
+      </p>
+    </aside>
+  );
+}

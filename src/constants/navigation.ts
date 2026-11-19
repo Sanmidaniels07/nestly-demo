@@ -1,0 +1,82 @@
+import {
+  LayoutDashboard,
+  Newspaper,
+  Store,
+  Bell,
+  User,
+  Settings,
+  Users2,
+  CalendarDays,
+  MessageCircle,
+  ShieldAlert,
+  BriefcaseBusiness,
+  Radio,
+} from "lucide-react";
+
+export const navigation = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    title: "Feed",
+    href: "/feed",
+    icon: Newspaper,
+  },
+  {
+    title: "Messages",
+    href: "/messages",
+    icon: MessageCircle,
+  },
+  {
+    title: "Marketplace",
+    href: "/marketplace",
+    icon: Store,
+  },
+  // The sellers' workspace (dashboard, products, orders, earnings). Lives
+  // under /settings/marketplace; only shown to applicants and sellers.
+  {
+    title: "Seller Hub",
+    href: "/settings/marketplace",
+    icon: BriefcaseBusiness,
+    sellerOnly: true,
+  },
+  {
+    title: "Live selling",
+    href: "/settings/marketplace?tab=lives",
+    icon: Radio,
+    sellerOnly: true,
+  },
+  {
+    title: "Communities",
+    href: "/communities",
+    icon: Users2,
+  },
+  {
+    title: "Events",
+    href: "/events",
+    icon: CalendarDays,
+  },
+  {
+    title: "Notifications",
+    href: "/notifications",
+    icon: Bell,
+  },
+  {
+    title: "Profile",
+    href: "/profile",
+    icon: User,
+  },
+  {
+    title: "Settings",
+    href: "/settings",
+    icon: Settings,
+  },
+  {
+    title: "Admin",
+    href: "/admin",
+    icon: ShieldAlert,
+    adminOnly: true,
+  },
+];

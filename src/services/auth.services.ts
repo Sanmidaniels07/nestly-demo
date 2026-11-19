@@ -1,0 +1,104 @@
+import { api } from "../lib/axios";
+import {
+  AuthResponse,
+  GoogleAuthPayload,
+  LoginPayload,
+  ResetPasswordPayload,
+  SignupPayload,
+  TwoFactorLoginPayload,
+} from "../types/auth";
+
+
+export const login = async (
+  data: LoginPayload
+): Promise<AuthResponse> => {
+  const response =
+    await api.post<AuthResponse>(
+      "/auth/login",
+      data
+    );
+
+  return response.data;
+};
+
+export const googleAuth = async (
+  data: GoogleAuthPayload
+): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>("/auth/google", data);
+  return response.data;
+};
+
+export const signup =
+  async (
+    data: SignupPayload
+  ) => {
+    const response =
+      await api.post(
+        "/auth/signup",
+        data
+      );
+
+    return response.data;
+  };
+
+export const forgotPassword =
+  async (
+    email: string
+  ) => {
+    const response =
+      await api.post(
+        "/auth/forgot-password",
+        {
+          email,
+        }
+      );
+
+    return response.data;
+  };
+
+export const resetPassword =
+  async (
+    data: ResetPasswordPayload
+  ) => {
+    const response =
+      await api.post(
+        "/auth/reset-password",
+        data
+      );
+
+    return response.data;
+  };
+
+  export const verifyEmail =
+  async (
+    token: string
+  ) => {
+    const response =
+      await api.get(
+        `/verify-email/${token}`
+      );
+
+    return response.data;
+  };
+
+  export const resendVerification =
+  async (
+    email: string
+  ) => {
+    const response =
+      await api.post(
+        "/verify-email/resend-verification",
+        {
+          email,
+        }
+      );
+
+    return response.data;
+  };
+
+export const loginWithTwoFactor = async (
+  data: TwoFactorLoginPayload
+): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>("/2fa/login", data);
+  return response.data;
+};

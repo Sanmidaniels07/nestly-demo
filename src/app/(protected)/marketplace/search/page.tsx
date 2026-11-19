@@ -1,0 +1,99 @@
+"use client";
+
+import { Suspense, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, Search } from "lucide-react";
+import { useGoBack } from "@/src/hooks/use-go-back";
+
+import { useProducts } from "@/src/hooks/use-products";
+import Input from "@/src/components/ui/input";
+import Pagination from "@/src/components/ui/pagination";
+import ProductCard from "../components/product-card";
+import { CardGridSkeleton } from "@/src/components/skeletons/card-grid-skeleton";
+
+function SearchPageContent() {
+  // Back to wherever the user came from; /marketplace if they landed here directly.
+  const goBack = useGoBack("/marketplace");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("q") ?? "");
+  const [page, setPage] = useState(1);
+
+  const { data, isLoading, isError } = useProducts({
+    search: search.trim() || undefined,
+    page,
+    limit: 12,
+  });
+
+  return (
+    <div className="mx-auto max-w-[1600px] space-y-6 px-5 py-8 lg:px-8">
+      <div className="space-y-4">
+        <button
+          type="button"
+          onClick={() => goBack()}
+          className="inline-flex items-center gap-1.5 text-[13.5px] font-medium text-violet-600 dark:text-violet-400 hover:underline"
+        >
+          <ArrowLeft size={15} />
+          Back
+        </button>
+
+        <h1 className="font-[family-name:var(--font-fraunces)] text-[36px] text-ink sm:text-[42px]">
+          Search products
+        </h1>
+      </div>
+
+      <Input
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Search for anything..."
+        icon={<Search size={16} />}
+      />
+
+      {isLoading && (
+        <CardGridSkeleton count={12} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+      )}
+
+      {isError && (
+        <div className="rounded-2xl border border-line bg-surface py-16 text-center text-[13.5px] text-red-500">
+          Couldn&apos;t load results. Please try again.
+        </div>
+      )}
+
+      {!isLoading && !isError && data?.products.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-line bg-surface-sunken py-16 text-center">
+          <p className="text-[13.5px] text-subtle">
+            {search ? "No products match your search." : "Start typing to search products."}
+          </p>
+        </div>
+      )}
+
+      {!isLoading && !isError && !!data?.products.length && (
+        <>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {data.products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+
+          <Pagination page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+        </>
+      )}
+    </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-[1600px] px-5 py-8 lg:px-8">
+          <CardGridSkeleton count={12} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" />
+        </div>
+      }
+    >
+      <SearchPageContent />
+    </Suspense>
+  );
+}

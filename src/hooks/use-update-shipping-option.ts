@@ -1,0 +1,31 @@
+"use client";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
+import toast from "react-hot-toast";
+
+import { updateShippingOption } from "../services/store.services";
+import { ApiErrorResponse } from "../types/api";
+import { UpdateShippingOptionPayload } from "../types/store";
+
+export const useUpdateShippingOption = (slug: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    unknown,
+    AxiosError<ApiErrorResponse>,
+    { optionId: string; data: UpdateShippingOptionPayload; successMessage?: string }
+  >({
+    mutationFn: ({ optionId, data }) => updateShippingOption(slug, optionId, data),
+
+    onSuccess: (_result, { successMessage }) => {
+      queryClient.invalidateQueries({ queryKey: ["store", slug] });
+      queryClient.invalidateQueries({ queryKey: ["store", "me"] });
+      toast.success(successMessage ?? "Shipping zone updated");
+    },
+
+    onError: (error) => {
+      toast.error(error.response?.data.message ?? "Failed to update shipping option");
+    },
+  });
+};

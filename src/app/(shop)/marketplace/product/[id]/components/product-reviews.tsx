@@ -1,0 +1,94 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Info } from "lucide-react";
+import { Review } from "@/src/types/review";
+
+import ReviewFilter, { ReviewFilterValue } from "./product-review-components/review-filter";
+import RatingOverview from "./product-review-components/rating-overview";
+import RatingBreakdown from "./product-review-components/rating-breakdown";
+import ReviewCard from "./product-review-components/review-card";
+
+interface Props {
+  reviews: Review[];
+  total: number;
+  // Current-version reviews only (see Review.earlierVersion).
+  averageRating: number;
+  ratingCount: number;
+  earlierVersionCount: number;
+}
+
+export default function ProductReviews({ reviews, total, averageRating, ratingCount, earlierVersionCount }: Props) {
+  const [filter, setFilter] = useState<ReviewFilterValue>("all");
+
+  const current = useMemo(() => reviews.filter((r) => !r.earlierVersion), [reviews]);
+
+  const breakdown = useMemo(() => {
+    return [5, 4, 3, 2, 1].map((stars) => ({
+      stars,
+      value: current.filter((r) => r.rating === stars).length,
+    }));
+  }, [current]);
+
+  const counts: Record<ReviewFilterValue, number> = useMemo(
+    () => ({
+      all: reviews.length,
+      "5": reviews.filter((r) => r.rating === 5).length,
+      "4": reviews.filter((r) => r.rating === 4).length,
+      "3": reviews.filter((r) => r.rating === 3).length,
+      "2": reviews.filter((r) => r.rating === 2).length,
+      "1": reviews.filter((r) => r.rating === 1).length,
+    }),
+    [reviews]
+  );
+
+  const filteredReviews = useMemo(() => {
+    if (filter === "all") return reviews;
+    return reviews.filter((r) => r.rating === Number(filter));
+  }, [reviews, filter]);
+
+  if (total === 0) return null;
+
+  return (
+    <section className="mt-8 rounded-2xl border border-line bg-surface p-6">
+      <h2 className="font-[family-name:var(--font-fraunces)] text-[22px] text-ink">
+        Customer reviews
+      </h2>
+
+      <div className="mt-6 grid gap-8 lg:grid-cols-[260px_1fr]">
+        <div>
+          <RatingOverview rating={Math.round(averageRating * 10) / 10} reviews={ratingCount} />
+          {earlierVersionCount > 0 && (
+            <p className="mt-3 flex items-start gap-1.5 text-[12px] leading-snug text-muted">
+              <Info size={13} className="mt-0.5 shrink-0" />
+              {earlierVersionCount} review{earlierVersionCount === 1 ? " is" : "s are"} for an earlier version of this listing and
+              {earlierVersionCount === 1 ? " isn't" : " aren't"} counted in the rating.
+            </p>
+          )}
+          <div className="mt-6">
+            <RatingBreakdown
+              breakdown={breakdown}
+              total={current.length}
+              activeStars={filter === "all" ? null : Number(filter)}
+              onSelectStars={(stars) => setFilter(stars === null ? "all" : (String(stars) as ReviewFilterValue))}
+            />
+          </div>
+        </div>
+
+        <div>
+          <ReviewFilter active={filter} onChange={setFilter} counts={counts} />
+
+          <div className="mt-6 space-y-4">
+            {filteredReviews.length === 0 ? (
+              <p className="py-8 text-center text-[13.5px] text-subtle">
+                No reviews match this filter.
+              </p>
+            ) : (
+              filteredReviews.map((review) => <ReviewCard key={review.id} review={review} />)
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

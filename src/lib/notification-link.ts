@@ -1,0 +1,76 @@
+import { Notification } from "../types/notification";
+
+// The page a notification opens - used by the notification list and by
+// tapped push notifications (/notifications/open).
+export function targetHref(notification: Pick<Notification, "targetType" | "targetId">): string | null {
+  switch (notification.targetType) {
+    case "POST":
+      return notification.targetId ? `/post/${notification.targetId}` : null;
+    case "USER":
+    case "BIRTHDAY":
+      return notification.targetId ? `/users/${notification.targetId}` : null;
+    // A day before: straight to their wishlist for gift ideas.
+    case "BIRTHDAY_SOON":
+      return notification.targetId ? `/users/${notification.targetId}?tab=wishlist` : null;
+    case "SELLER_AGREEMENT":
+      return "/seller-terms#returns";
+    // Chip in on a gift: its page (id is the code).
+    case "GROUP_GIFT":
+      return notification.targetId ? `/chip-in/${notification.targetId}` : null;
+    case "GIFT":
+      return notification.targetId ? `/gift/${notification.targetId}` : null;
+    case "CONVERSATION":
+      return notification.targetId ? `/messages/${notification.targetId}` : null;
+    case "PRODUCT":
+      return notification.targetId
+        ? `/settings/marketplace/components/products/${notification.targetId}/edit`
+        : null;
+    case "SELLER_APPLICATION":
+      return "/marketplace/sell";
+    case "COMMISSION_CHANGE":
+      return "/settings/marketplace?tab=products";
+    case "ADMIN_SELLER_APPLICATION":
+    case "ADMIN_CAC_SUBMITTED":
+      return "/admin?tab=sellers";
+    case "SELLER_SETUP":
+      return "/settings/marketplace";
+    case "PROFILE_SETUP":
+      return "/dashboard?checklist=1";
+    case "CAC_REMINDER":
+      return "/settings/marketplace?cac=1";
+    case "ADMIN_PAYOUT_ACCOUNT_CHANGED":
+    case "ADMIN_REFUND_NEEDED":
+    case "ADMIN_PAYOUT_FAILED":
+      return "/admin?tab=payouts";
+    case "ADMIN_DISPUTE":
+      return "/admin?tab=disputes";
+    case "SELLER_RETURNS":
+      return "/settings/marketplace?tab=returns";
+    case "SELLER_EARNINGS":
+      return "/settings/marketplace?tab=earnings";
+    case "MY_RETURNS":
+      return "/marketplace/returns";
+    case "ORDER":
+      return notification.targetId ? `/marketplace/orders/${notification.targetId}` : "/marketplace/orders";
+    // Shopping updates: a product (store page view, not the seller's editor),
+    // a store (targetId is its slug) or the cart.
+    case "PRODUCT_PAGE":
+      return notification.targetId ? `/marketplace/product/${notification.targetId}` : null;
+    case "STORE_PAGE":
+      return notification.targetId ? `/marketplace/seller/${notification.targetId}` : null;
+    case "CART":
+      return "/marketplace/cart";
+    // Live selling: the public live page (targetId is its share code), or
+    // the seller's studio for their own live (targetId is the live's id).
+    case "LIVE":
+      return notification.targetId ? `/live/${notification.targetId}` : null;
+    case "LIVE_STUDIO":
+      return notification.targetId ? `/marketplace/live/${notification.targetId}` : "/settings/marketplace?tab=lives";
+    case "SELLER_ORDER":
+      return notification.targetId
+        ? `/settings/marketplace?tab=orders&order=${notification.targetId}`
+        : "/settings/marketplace?tab=orders";
+    default:
+      return null;
+  }
+}

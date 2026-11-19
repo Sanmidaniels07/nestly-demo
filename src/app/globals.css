@@ -1,0 +1,472 @@
+@import "tailwindcss";
+
+/* next-themes toggles a `dark` class on <html>. Tailwind v4's dark: variant
+   follows the OS setting by default, so without this the in-app switch
+   wouldn't drive any dark: styles. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Theme tokens. Components use these (text-ink, bg-surface, border-line...)
+   instead of hard-coded hex, so each colour has one light and one dark value.
+   Light values match the original design exactly. */
+:root {
+  color-scheme: light;
+
+  --canvas: #f5f7fa;
+  --canvas-via: #f0f4ff;
+  --canvas-to: #f5f0ff;
+
+  --surface: #ffffff;
+  --surface-2: #f7f7fb;
+  --surface-sunken: #fafafd;
+  --surface-muted: #f1f0f5;
+  --track: #ece9f6;
+  --tint: #f6f3ff;
+  --tint-blue: #e8f1ff;
+  --tint-orange: #fff0e8;
+
+  --ink: #13131a;
+  --ink-2: #334155;
+  --ink-3: #475569;
+  --muted: #64748b;
+  --subtle: #94a3b8;
+  --faint: #c4c0dc;
+
+  --line: #ece9f6;
+  --line-soft: #f2f1f8;
+  --line-strong: #e5e7eb;
+
+  /* Legacy names still used by the auth layout, card and typography. */
+  --background: var(--canvas);
+  --foreground: #1a1a2e;
+  --card: var(--surface);
+  --card-foreground: #1a1a2e;
+  --border: var(--line-strong);
+  --muted-foreground: var(--subtle);
+
+  /* BdayConnect Brand Colors */
+  --primary: #2b7fff;
+  --primary-foreground: #ffffff;
+  --accent: #491b9f;
+  --highlight: #ff7a45;
+  --success: #10b981;
+}
+
+/* Dark palette: deep violet-tinted ink rather than neutral black/slate, so
+   the violet/indigo brand accents feel at home. Surfaces step up in
+   lightness (canvas < surface < surface-2) to keep cards distinct. */
+.dark {
+  color-scheme: dark;
+
+  --canvas: #0c0b12;
+  --canvas-via: #0e0d17;
+  --canvas-to: #120f1c;
+
+  --surface: #16151f;
+  --surface-2: #1e1d2a;
+  --surface-sunken: #121119;
+  --surface-muted: #232232;
+  --track: #2b2a3b;
+  --tint: rgb(139 92 246 / 0.14);
+  --tint-blue: rgb(59 130 246 / 0.14);
+  --tint-orange: rgb(255 122 69 / 0.14);
+
+  --ink: #f2f1f8;
+  --ink-2: #d6d4e3;
+  --ink-3: #bdbacd;
+  --muted: #a3a0b6;
+  --subtle: #807d96;
+  --faint: #4f4c65;
+
+  --line: #2a2839;
+  --line-soft: #211f2e;
+  --line-strong: #363449;
+
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+
+  --primary: #3b82f6;
+  --accent: #6d2fc7;
+  --highlight: #fb923c;
+}
+
+@theme inline {
+  /* Body/UI text: Plus Jakarta Sans. Headlines keep Fraunces italic and
+     numbers/labels JetBrains Mono via their own variables. */
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-canvas: var(--canvas);
+  --color-canvas-via: var(--canvas-via);
+  --color-canvas-to: var(--canvas-to);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-muted: var(--surface-muted);
+  --color-track: var(--track);
+  --color-tint: var(--tint);
+  --color-tint-blue: var(--tint-blue);
+  --color-tint-orange: var(--tint-orange);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Safety net: without this, any element anywhere that ends up wider than
+     the viewport (a scroll strip, a fixed-width table, an oversized image)
+     makes the ENTIRE page scroll sideways — navbar included — instead of
+     that one element being contained on its own. This never clips content
+     that's meant to scroll internally (overflow-x-auto elements still
+     establish their own scroll context); it only stops accidental overflow
+     from escaping to the page level. */
+  overflow-x: hidden;
+}
+
+/* Hover-reveal scrollbar — invisible by default, visible only while hovering the scroll container */
+.hover-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.hover-scroll:hover {
+  scrollbar-color: rgba(124, 58, 237, 0.25) transparent;
+}
+
+.hover-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hover-scroll::-webkit-scrollbar-thumb {
+  background-color: transparent;
+  border-radius: 999px;
+}
+
+.hover-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(124, 58, 237, 0.25);
+}
+
+.hover-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toast-card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 380px;
+  padding: 14px 38px 14px 14px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--toast-accent) 35%, var(--line));
+  box-shadow:
+    0 1px 2px rgba(19, 19, 26, 0.04),
+    0 10px 24px -10px rgba(124, 58, 237, 0.18);
+}
+
+.toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.toast-message {
+  flex: 1;
+  padding-top: 4px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.toast-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 8px;
+  color: var(--subtle);
+  opacity: 0;
+  transition:
+    opacity 0.15s ease,
+    background 0.15s ease,
+    color 0.15s ease;
+}
+.toast-card:hover .toast-close {
+  opacity: 1;
+}
+.toast-close:hover {
+  background: var(--tint);
+  color: #7c3aed;
+}
+
+.toast-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--toast-accent);
+  opacity: 0.4;
+  transform-origin: left;
+  animation-name: toast-shrink;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+@keyframes toast-shrink {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+.toast-spin {
+  animation: toast-rotate 0.8s linear infinite;
+}
+@keyframes toast-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.toast-in {
+  animation: toast-enter 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards;
+}
+.toast-out {
+  animation: toast-exit 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+@keyframes toast-enter {
+  0% {
+    transform: translateX(24px) scale(0.96);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-4px) scale(1.01);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+@keyframes toast-exit {
+  to {
+    transform: translateX(16px) scale(0.96);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .toast-card {
+    min-width: 0;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-in,
+  .toast-out,
+  .toast-progress,
+  .toast-spin {
+    animation: none !important;
+  }
+}
+
+
+.spinner-rotate {
+  animation: spinner-spin 0.9s linear infinite;
+}
+@keyframes spinner-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner-rotate {
+    animation-duration: 2.2s;
+  }
+}
+
+/* App splash (components/ui/app-splash.tsx): the mark's rings turn in
+   opposite directions, the dot breathes, a bar sweeps underneath. */
+.splash-pop {
+  animation: splash-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.splash-ring-outer {
+  animation: spinner-spin 7s linear infinite;
+}
+.splash-ring-inner {
+  animation: spinner-spin 4.5s linear infinite reverse;
+}
+.splash-dot {
+  animation: splash-breathe 1.6s ease-in-out infinite;
+}
+.splash-bar {
+  animation: splash-sweep 1.4s ease-in-out infinite;
+}
+@keyframes splash-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+@keyframes splash-breathe {
+  50% {
+    transform: scale(0.78);
+  }
+}
+@keyframes splash-sweep {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(330%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash-pop,
+  .splash-ring-outer,
+  .splash-ring-inner,
+  .splash-dot {
+    animation: none;
+  }
+  .splash-bar {
+    animation-duration: 3s;
+  }
+}
+
+/* Legal pages (Terms, Privacy, Seller Agreement): Tailwind's reset strips
+   list bullets and link styling, so restore them inside the document body. */
+.legal-body ul,
+.guide-body ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.legal-body li + li,
+.guide-body li + li {
+  margin-top: 0.35rem;
+}
+.legal-body a,
+.guide-body a {
+  color: #6d28d9;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.dark .legal-body a,
+.dark .guide-body a {
+  color: #c4b5fd;
+}
+.legal-body strong,
+.guide-body strong {
+  color: var(--ink);
+}
+
+/* Scrollable without a visible scrollbar (stories row, picker wheels). */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* iPhone Safari zooms the page in when a text field under 16px is focused,
+   shifting the layout. On touch screens every field is at least 16px. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
+}
+
+/* Post likes: heart burst on double-tap, and a quick pop on the like button. */
+.heart-burst {
+  animation: heart-burst 0.85s ease-out forwards;
+}
+@keyframes heart-burst {
+  0% { transform: scale(0.2); opacity: 0; }
+  15% { transform: scale(1.15); opacity: 0.95; }
+  30% { transform: scale(0.95); opacity: 0.95; }
+  70% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.1); opacity: 0; }
+}
+.like-pop {
+  animation: like-pop 0.35s ease-out;
+}
+@keyframes like-pop {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.3); }
+  100% { transform: scale(1.1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .heart-burst,
+  .like-pop {
+    animation: none;
+  }
+}
+
+/* Hanging "Become a seller" tag on the dashboard hero: swings from its
+   string (transform-origin at the top), with a little nudge on hover. */
+.swing-tag {
+  transform-origin: 50% 0;
+  animation: swing-tag 3.4s ease-in-out infinite;
+}
+.swing-tag:hover {
+  animation-play-state: paused;
+}
+@keyframes swing-tag {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(5deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .swing-tag {
+    animation: none;
+  }
+}
+/* Live selling: hearts rising up the video, pop-in cards, chat fading at the top. */
+@keyframes live-heart-rise {
+  0% { transform: translateY(0) scale(0.6); opacity: 0; }
+  12% { opacity: 1; transform: translateY(-20px) scale(1); }
+  100% { transform: translateY(-240px) translateX(-14px) scale(0.9); opacity: 0; }
+}
+.live-heart { animation: live-heart-rise 2.4s ease-out forwards; }
+@keyframes live-pop-in {
+  from { transform: translateY(8px) scale(0.96); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.live-pop { animation: live-pop-in 0.25s ease-out; }
+.live-chat-fade {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 28px);
+  mask-image: linear-gradient(to bottom, transparent 0, black 28px);
+  scrollbar-width: none;
+}
+.live-chat-fade::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .live-heart, .live-pop { animation-duration: 0.01ms; }
+}

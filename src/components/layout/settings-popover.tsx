@@ -1,0 +1,137 @@
+"use client";
+
+import Link from "next/link";
+import { LogOut } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
+import { useEffect, useRef, useState, RefObject } from "react";
+import { settingsNavigation } from "@/src/constants/settings-navigation";
+
+interface Props {
+  email?: string;
+  onClose: () => void;
+  onLogoutClick: () => void;
+  anchorRef: RefObject<HTMLButtonElement | null>;
+}
+
+export default function SettingsPopover({
+  email,
+  onClose,
+  onLogoutClick,
+  anchorRef,
+}: Props) {
+  const pathname = usePathname();
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ bottom: number; left: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const updatePosition = () => {
+      if (!anchorRef.current) return;
+      const rect = anchorRef.current.getBoundingClientRect();
+      // Anchor to the button's bottom edge and grow upward — the trigger
+      // sits near the bottom of the sidebar, so opening downward pushes
+      // items off the bottom of the viewport.
+      setPosition({
+        bottom: window.innerHeight - rect.bottom,
+        left: rect.right + 8,
+      });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [anchorRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(e.target as Node) &&
+        anchorRef.current &&
+        !anchorRef.current.contains(e.target as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [onClose, anchorRef]);
+
+  if (!mounted || !position) return null;
+
+  return createPortal(
+    <div
+      ref={popoverRef}
+      style={{ bottom: position.bottom, left: position.left }}
+      className="fixed z-[100] max-h-[calc(100vh-2rem)] w-64 overflow-y-auto rounded-2xl border border-line bg-surface p-2 shadow-[0_20px_60px_-16px_rgba(15,15,20,0.25)]"
+    >
+      {email && (
+        <div className="border-b border-line-soft px-3 py-2.5">
+          <p className="truncate font-[family-name:var(--font-mono)] text-[11.5px] text-subtle">
+            {email}
+          </p>
+        </div>
+      )}
+
+      <div className="space-y-0.5 py-1.5">
+        {settingsNavigation.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              aria-current={active ? "page" : undefined}
+              className={`
+                relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors
+                ${active ? "bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300" : "text-ink-2 hover:bg-surface-2 hover:text-violet-600 dark:hover:text-violet-400"}
+              `}
+            >
+              {active && (
+                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-violet-600 to-indigo-600" />
+              )}
+              <item.icon size={16} className={active ? "text-violet-600 dark:text-violet-400" : "text-subtle"} />
+              {item.title}
+            </Link>
+          );
+        })}
+      </div>
+
+      <div className="border-t border-line-soft py-1.5">
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            onLogoutClick();
+          }}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-red-600 dark:text-red-400 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+        >
+          <LogOut size={16} />
+          Log out
+        </button>
+      </div>
+    </div>,
+    document.body
+  );
+}

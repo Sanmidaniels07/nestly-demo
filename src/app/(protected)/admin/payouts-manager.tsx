@@ -1,0 +1,340 @@
+"use client";
+
+import { useState } from "react";
+import { Clock, Landmark, Plus, ShieldAlert, Store as StoreIcon, Wallet, Zap } from "lucide-react";
+
+import { usePayouts } from "@/src/hooks/use-payouts";
+import { useCreatePayout } from "@/src/hooks/use-create-payout";
+import { useStores } from "@/src/hooks/use-stores";
+import { useStorePayoutInfo } from "@/src/hooks/use-store-payout-info";
+import { Store } from "@/src/types/store";
+import Input from "@/src/components/ui/input";
+import Button from "@/src/components/ui/button";
+import Pagination from "@/src/components/ui/pagination";
+import { formatRelativeTime } from "@/src/lib/date";
+import HeldPayoutsPanel from "./held-payouts-panel";
+
+function money(value: number) {
+  return new Intl.NumberFormat("en-NG", {
+    style: "currency",
+    currency: "NGN",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+export default function PayoutsManager() {
+  const [page, setPage] = useState(1);
+  const [createOpen, setCreateOpen] = useState(false);
+
+  const { data, isLoading } = usePayouts({ page, limit: 15 });
+  const payouts = data?.payouts ?? [];
+
+  return (
+    <div className="space-y-5">
+      <HeldPayoutsPanel />
+
+      <div className="flex justify-end">
+        <button
+          onClick={() => setCreateOpen((prev) => !prev)}
+          className="flex items-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-[13.5px] font-semibold text-white transition-all hover:brightness-110"
+        >
+          <Plus size={16} />
+          Record payout
+        </button>
+      </div>
+
+      {createOpen && <CreatePayoutForm onDone={() => setCreateOpen(false)} />}
+
+      {isLoading ? (
+        <div className="space-y-2.5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-2xl bg-surface-2" />
+          ))}
+        </div>
+      ) : payouts.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-line bg-surface-sunken px-8 py-16 text-center">
+          <Wallet className="mx-auto h-8 w-8 text-faint" strokeWidth={1.5} />
+          <p className="mt-4 text-[13.5px] text-subtle">No payouts recorded yet.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-line bg-surface">
+          <table className="w-full text-left">
+            <thead className="border-b border-line-soft bg-surface-sunken">
+              <tr>
+                <th className="px-5 py-3 text-[12px] font-medium uppercase tracking-wide text-subtle">
+                  Store
+                </th>
+                <th className="px-5 py-3 text-[12px] font-medium uppercase tracking-wide text-subtle">
+                  Amount
+                </th>
+                <th className="px-5 py-3 text-[12px] font-medium uppercase tracking-wide text-subtle">
+                  Note
+                </th>
+                <th className="px-5 py-3 text-[12px] font-medium uppercase tracking-wide text-subtle">
+                  Date
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line-soft">
+              {payouts.map((payout) => (
+                <tr key={payout.id}>
+                  <td className="px-5 py-3.5 text-[13.5px] font-medium text-ink">
+                    {payout.store?.name ?? "Unknown store"}
+                  </td>
+                  <td className="px-5 py-3.5 font-[family-name:var(--font-mono)] text-[13px] font-semibold text-violet-700 dark:text-violet-300">
+                    {money(payout.amount)}
+                  </td>
+                  <td className="max-w-[260px] truncate px-5 py-3.5 text-[12.5px] text-muted">
+                    {payout.status && payout.status !== "PAID" && (
+                      <span
+                        className={`mr-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                          payout.status === "FAILED"
+                            ? "bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-300"
+                            : "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300"
+                        }`}
+                        title={payout.failureReason ?? undefined}
+                      >
+                        {payout.status === "FAILED" ? "Failed" : "Sending"}
+                      </span>
+                    )}
+                    {payout.method === "TRANSFER" ? "Paystack transfer · " : ""}
+                    {payout.note ?? "—"}
+                  </td>
+                  <td className="whitespace-nowrap px-5 py-3.5 text-[12px] text-subtle">
+                    {formatRelativeTime(payout.createdAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {data && data.totalPages > 1 && (
+        <Pagination page={data.page} totalPages={data.totalPages} onPageChange={setPage} />
+      )}
+    </div>
+  );
+}
+
+function CreatePayoutForm({ onDone }: { onDone: () => void }) {
+  const [storeSearch, setStoreSearch] = useState("");
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+
+  const { data: storesData } = useStores({ search: storeSearch, limit: 6 });
+  const { data: payoutInfo, isLoading: isLoadingPayoutInfo } = useStorePayoutInfo(
+    selectedStore?.id
+  );
+  const { mutate: createPayout, isPending } = useCreatePayout();
+
+  const stores = storesData?.stores ?? [];
+  const availableBalance = payoutInfo?.availableBalance ?? 0;
+  const exceedsBalance = !!selectedStore && Number(amount) > availableBalance;
+  const canSubmit = !!selectedStore && Number(amount) > 0 && !exceedsBalance;
+
+  const selectStore = (store: Store | null) => {
+    setSelectedStore(store);
+    setAmount("");
+  };
+
+  const handleSubmit = () => {
+    if (!canSubmit || !selectedStore) return;
+
+    createPayout(
+      { storeId: selectedStore.id, amount: Number(amount), note: note.trim() || undefined },
+      {
+        onSuccess: () => {
+          setSelectedStore(null);
+          setStoreSearch("");
+          setAmount("");
+          setNote("");
+          onDone();
+        },
+      }
+    );
+  };
+
+  return (
+    <div className="space-y-4 rounded-2xl border border-dashed border-violet-200 dark:border-violet-500/30 bg-surface-sunken p-5">
+      <div>
+        <label className="mb-2 block text-[13px] font-medium text-ink-2">Store</label>
+
+        {selectedStore ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-2xl border border-violet-200 dark:border-violet-500/30 bg-violet-50 dark:bg-violet-500/10 px-4 py-3">
+              <div className="flex items-center gap-2.5">
+                <StoreIcon size={15} className="text-violet-600 dark:text-violet-400" />
+                <span className="text-[13.5px] font-medium text-ink">
+                  {selectedStore.name}
+                </span>
+              </div>
+              <button
+                onClick={() => selectStore(null)}
+                className="text-[12.5px] font-medium text-violet-600 dark:text-violet-400 hover:underline"
+              >
+                Change
+              </button>
+            </div>
+
+            {isLoadingPayoutInfo ? (
+              <div className="h-20 animate-pulse rounded-2xl bg-surface-2" />
+            ) : payoutInfo ? (
+              <div className="rounded-2xl border border-line bg-surface p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  {payoutInfo.store.paystackSubaccountCode && !payoutInfo.isOnHold && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[11.5px] font-medium text-emerald-700 dark:text-emerald-300 w-fit">
+                      <Zap size={11} className="fill-emerald-700" />
+                      Auto-pay active
+                    </div>
+                  )}
+                  {payoutInfo.isOnHold && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1 text-[11.5px] font-medium text-amber-700 dark:text-amber-300 w-fit">
+                      <Clock size={11} />
+                      On hold — account changed recently
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center justify-between">
+                  <p className="text-[12px] font-medium uppercase tracking-wide text-subtle">
+                    {payoutInfo.store.paystackSubaccountCode
+                      ? "Available balance (not auto-paid)"
+                      : "Available balance"}
+                  </p>
+                  {availableBalance > 0 && (
+                    <button
+                      onClick={() => setAmount(String(availableBalance))}
+                      className="text-[12px] font-medium text-violet-600 dark:text-violet-400 hover:underline"
+                    >
+                      Use full balance
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 font-[family-name:var(--font-mono)] text-[18px] font-semibold text-ink">
+                  {money(availableBalance)}
+                </p>
+                {payoutInfo.store.paystackSubaccountCode && !payoutInfo.isOnHold && (
+                  <p className="mt-1 text-[12px] text-subtle">
+                    Most of this seller&apos;s earnings are paid straight to their bank
+                    automatically. This is only revenue from before auto-pay was set up,
+                    if any.
+                  </p>
+                )}
+                {payoutInfo.isOnHold && (
+                  <p className="mt-1 text-[12px] text-amber-700 dark:text-amber-300">
+                    The bank account was changed within the last {payoutInfo.holdHours}{" "}
+                    hours, so automatic payouts are paused as a security measure.
+                    Revenue is accruing here in the meantime.
+                  </p>
+                )}
+
+                <div className="mt-3 flex items-start gap-2.5 border-t border-line-soft pt-3">
+                  <Landmark size={15} className="mt-0.5 shrink-0 text-subtle" />
+                  {payoutInfo.store.payoutAccountNumber ? (
+                    <div className="text-[12.5px] text-ink-2">
+                      <p className="font-medium">{payoutInfo.store.payoutBankName}</p>
+                      <p className="text-muted">
+                        {payoutInfo.store.payoutAccountNumber} ·{" "}
+                        {payoutInfo.store.payoutAccountName}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-[12.5px] text-amber-600 dark:text-amber-400">
+                      This seller hasn&apos;t added payout bank details yet.
+                    </p>
+                  )}
+                </div>
+
+                {payoutInfo.recentChanges.length > 0 && (
+                  <div className="mt-3 border-t border-line-soft pt-3">
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-subtle">
+                      <ShieldAlert size={12} />
+                      Recent account changes
+                    </div>
+                    <div className="mt-2 space-y-2">
+                      {payoutInfo.recentChanges.map((change) => (
+                        <div key={change.id} className="text-[12px] text-muted">
+                          <span className="font-medium text-ink-2">
+                            {change.newBankName} ····{change.newAccountNumber.slice(-4)}
+                          </span>
+                          {change.previousBankName && (
+                            <span>
+                              {" "}
+                              (was {change.previousBankName} ····
+                              {change.previousAccountNumber?.slice(-4)})
+                            </span>
+                          )}
+                          <span className="text-subtle">
+                            {" "}
+                            · {formatRelativeTime(change.changedAt)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <div>
+            <Input
+              value={storeSearch}
+              onChange={(e) => setStoreSearch(e.target.value)}
+              placeholder="Search stores by name..."
+            />
+            {storeSearch.trim() && stores.length > 0 && (
+              <div className="mt-2 space-y-1 rounded-2xl border border-line bg-surface p-2">
+                {stores.map((store) => (
+                  <button
+                    key={store.id}
+                    onClick={() => selectStore(store)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[13.5px] text-ink hover:bg-surface-2"
+                  >
+                    <StoreIcon size={14} className="text-subtle" />
+                    {store.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Input
+            label="Amount (₦)"
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="50000"
+          />
+          {exceedsBalance && (
+            <p className="mt-1.5 text-[12px] text-red-600 dark:text-red-400">
+              Exceeds the available balance ({money(availableBalance)}).
+            </p>
+          )}
+        </div>
+        <Input
+          label="Note (optional)"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="e.g. Weekly payout"
+        />
+      </div>
+
+      <Button
+        variant="tribely"
+        disabled={!canSubmit}
+        loading={isPending}
+        onClick={handleSubmit}
+        className="w-full sm:w-auto"
+      >
+        Record payout
+      </Button>
+    </div>
+  );
+}

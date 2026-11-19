@@ -1,0 +1,194 @@
+import { Category } from "./category";
+import { DeliveryVehicle } from "../lib/delivery-vehicle";
+
+export interface ProductImage {
+  id?: string;
+  url: string;
+  isPrimary?: boolean;
+}
+
+export interface ProductSpecification {
+  id?: string;
+  name: string;
+  value: string;
+}
+
+// Old free-form name/value rows from before options existed (seller-only).
+export interface LegacyProductVariant {
+  id?: string;
+  name: string;
+  value: string;
+  price?: number | null;
+  stock?: number | null;
+}
+
+// A choice buyers make, e.g. Size: [Small, Medium, Large].
+export interface ProductOption {
+  id?: string;
+  name: string;
+  values: string[];
+  position?: number;
+}
+
+// One combination of option values (option2 is "" with a single option).
+export interface ProductVariation {
+  id: string;
+  option1: string;
+  option2: string;
+  price: number | null;
+  stock: number;
+  isActive: boolean;
+}
+
+export interface OptionInput {
+  name: string;
+  values: string[];
+}
+
+export interface VariationInput {
+  option1: string;
+  option2?: string;
+  price?: number | null;
+  stock: number;
+  isActive?: boolean;
+}
+
+export type ProductCondition = "NEW" | "USED" | "REFURBISHED" | "FRESHLY_MADE" | "MADE_TO_ORDER" | "PRE_ORDER";
+// PRIVATE: the item behind a payment link (bought only through /pay/{code}).
+export type ProductStatus = "DRAFT" | "PUBLISHED" | "OUT_OF_STOCK" | "ARCHIVED" | "PRIVATE";
+
+export interface ProductStoreSummary {
+  id: string;
+  name: string;
+  slug: string;
+  logo?: string | null;
+  city?: string | null;
+  state?: string | null;
+  // Only ever true for admins (everyone else can't open suspended stores).
+  isSuspended?: boolean;
+  /** The seller's user id - to start a chat about the product. */
+  sellerUserId?: string;
+  // False when the store has no delivery zone and no pickup point yet -
+  // its products can be viewed but not bought.
+  canDeliver?: boolean;
+}
+
+export interface Product {
+  id: string;
+  storeId: string;
+  categoryId: string;
+  title: string;
+  description: string;
+  sku: string;
+  brand?: string | null;
+  condition: ProductCondition;
+  // Smallest vehicle that can deliver it.
+  deliveryVehicle?: DeliveryVehicle;
+  price: number;
+  originalPrice?: number | null;
+  stock: number;
+  isFeatured?: boolean;
+  highlights?: string[];
+  status: ProductStatus;
+  images: ProductImage[];
+  specifications: ProductSpecification[];
+  options?: ProductOption[];
+  variations?: ProductVariation[];
+  legacyVariants?: LegacyProductVariant[];
+  store?: ProductStoreSummary;
+  category?: Category;
+  rating?: number;
+  reviewCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Products from /recommendations - best sellers carry soldCount, "For you"
+// picks carry why they were chosen.
+export type RecommendationReason = "FOLLOWED_STORE" | "SIMILAR" | "POPULAR" | "NEW";
+
+export interface RecommendedProduct extends Product {
+  soldCount?: number;
+  reason?: RecommendationReason;
+}
+
+export interface CreateProductPayload {
+  categoryId: string;
+  title: string;
+  description: string;
+  sku: string;
+  brand?: string;
+  condition: ProductCondition;
+  deliveryVehicle?: DeliveryVehicle;
+  price: number;
+  originalPrice?: number;
+  stock: number;
+  highlights?: string[];
+  images?: ProductImage[];
+  specifications?: ProductSpecification[];
+  // Sent together; [] removes options. Leave out to keep them as they are.
+  options?: OptionInput[];
+  variations?: VariationInput[];
+}
+
+export type UpdateProductPayload = Partial<CreateProductPayload> & {
+  status?: ProductStatus;
+};
+
+export interface ProductListParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  condition?: ProductCondition;
+  brand?: string;
+  sort?: "newest" | "oldest" | "price_asc" | "price_desc";
+}
+
+export interface NearbyProductParams {
+  state?: string;
+  city?: string;
+  area?: string;
+  category?: string;
+  page?: number;
+  limit?: number;
+}
+
+// How close a product's seller is to the buyer's place, closest first:
+// based in the area, delivers there, elsewhere in the city, elsewhere in the state.
+export type NearbyTier = "AREA" | "DELIVERS" | "CITY" | "STATE";
+
+export interface NearbyProduct extends Product {
+  nearby: {
+    tier: NearbyTier;
+    // Cheapest delivery to the buyer's area that can carry it; null if the seller has no zone there.
+    deliveryFee: number | null;
+  };
+}
+
+export interface NearbyProductsResult {
+  products: NearbyProduct[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+  location: { state: string; city: string | null; area: string | null; label: string };
+  tierCounts: Partial<Record<NearbyTier, number>>;
+}
+
+export interface MyProductParams {
+  page?: number;
+  limit?: number;
+  status?: ProductStatus;
+}
+
+export interface BulkUpdateProductStatusPayload {
+  productIds: string[];
+  status: ProductStatus;
+}
+
+export interface BulkDeleteProductsPayload {
+  productIds: string[];
+}

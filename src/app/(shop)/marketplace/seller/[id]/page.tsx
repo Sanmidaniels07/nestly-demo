@@ -1,0 +1,114 @@
+import type { Metadata } from "next";
+
+import { NotFoundError, jsonLd, serverGet } from "@/src/lib/server-api";
+import { stateLabel } from "@/src/lib/locations";
+import { OG_IMAGE, SITE_NAME, SITE_URL } from "@/src/lib/site";
+import { Paginated } from "@/src/types/api";
+import { Product } from "@/src/types/product";
+import { Store } from "@/src/types/store";
+import SellerStorePage from "./store-page";
+
+interface Props {
+  params: Promise<{ id: string }>;
+}
+
+const clip = (text: string, max: number) => {
+  const flat = text.replace(/\s+/g, " ").trim();
+  return flat.length > max ? `${flat.slice(0, max - 1).trimEnd()}…` : flat;
+};
+
+// One fetch per request - Next dedupes it between metadata and the page.
+// "hidden": the public API says not found - it may still be a suspended
+// store an admin can open, so the page lets the browser check with their
+// login (and shows "not found" to everyone else).
+const loadStore = async (slug: string) => {
+  try {
+    return { response: await serverGet<Store>(`/stores/${encodeURIComponent(slug)}`), hidden: false };
+  } catch (error) {
+    if (error instanceof NotFoundError) return { response: null, hidden: true };
+    throw error;
+  }
+};
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id: slug } = await params;
+  const { response, hidden } = await loadStore(slug);
+  // Not public (missing, or a suspended store only admins may open):
+  // the browser retries with the viewer's login; never index it.
+  if (hidden) return { title: "Store", robots: { index: false, follow: false } };
+  if (!response) return { title: "Store" };
+
+  const store = response.data;
+  // "Lagos" rather than "Lagos, Lagos".
+  const where = [...new Set([store.city, store.state].filter(Boolean))].join(", ");
+  const title = where ? `${store.name} – ${where}` : store.name;
+  const description = clip(
+    store.description
+      ? `${store.description} Shop ${store.name} on ${SITE_NAME}.`
+      : `Shop ${store.name}${where ? ` in ${where}` : ""} on ${SITE_NAME} - secure Paystack checkout and delivery-code protection.`,
+    160
+  );
+  const image = store.banner || store.logo;
+  const url = `/marketplace/seller/${store.slug}`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    // Without a store photo, share cards fall back to the Nestly image.
+    openGraph: { title, description, url, type: "website", images: image ? [{ url: image, alt: store.name }] : [OG_IMAGE] },
+    twitter: { card: "summary_large_image", title, description, images: image ? [image] : [OG_IMAGE.url] },
+  };
+}
+
+// Where the store delivers: all of Nigeria (a flat-rate zone with no areas
+// or state), or each named area / whole state from its delivery zones.
+const areaServed = (store: Store) => {
+  const zones = (store.shippingOptions ?? []).filter((zone) => zone.type === "DELIVERY" && !zone.isArchived);
+  if (zones.some((zone) => zone.areas.length === 0 && !zone.state)) return { "@type": "Country", name: "Nigeria" };
+  const places = zones.flatMap((zone) => {
+    const state = zone.state || store.state;
+    if (zone.areas.length === 0) return state ? [stateLabel(state)] : [];
+    return zone.areas.map((area) => (state ? `${area}, ${stateLabel(state)}` : area));
+  });
+  const unique = [...new Set(places)].slice(0, 100);
+  return unique.length ? unique.map((name) => ({ "@type": "Place", name })) : undefined;
+};
+
+// schema.org Store so search engines and AI assistants know what it is,
+// where it's based and where it delivers.
+const storeJsonLd = (store: Store) => ({
+  "@context": "https://schema.org",
+  "@type": "Store",
+  name: store.name,
+  url: `${SITE_URL}/marketplace/seller/${store.slug}`,
+  description: store.description ? clip(store.description, 5000) : undefined,
+  image: store.banner || store.logo || undefined,
+  logo: store.logo || undefined,
+  address:
+    store.city || store.state
+      ? { "@type": "PostalAddress", addressLocality: store.city || undefined, addressRegion: store.state || undefined, addressCountry: "NG" }
+      : undefined,
+  areaServed: areaServed(store),
+  paymentAccepted: "Card, Bank transfer, USSD (Paystack)",
+  currenciesAccepted: "NGN",
+  aggregateRating:
+    store.rating && store.reviewCount
+      ? { "@type": "AggregateRating", ratingValue: Math.round(store.rating * 10) / 10, reviewCount: store.reviewCount }
+      : undefined,
+});
+
+export default async function StorePage({ params }: Props) {
+  const { id: slug } = await params;
+  const { response } = await loadStore(slug);
+  const products = response
+    ? await serverGet<Paginated<"products", Product>>(`/stores/${encodeURIComponent(slug)}/products?limit=12`).catch(() => null)
+    : null;
+
+  return (
+    <>
+      {response && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(storeJsonLd(response.data)) }} />}
+      <SellerStorePage slug={slug} initialStore={response ?? undefined} initialProducts={products ?? undefined} />
+    </>
+  );
+}

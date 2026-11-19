@@ -1,0 +1,131 @@
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { demoAdapter } from "../demo/adapter"; // DEMO
+
+// DEMO: every request is answered in the browser by the demo backend.
+axios.defaults.adapter = demoAdapter;
+
+import { refreshSession } from "../services/session.services";
+import { useAuthStore } from "../store/auth-store";
+
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  // Lets the browser send the httpOnly refresh-token cookie on every
+  // request and accept new Set-Cookie headers back (login/refresh/logout).
+  withCredentials: true,
+  adapter: demoAdapter, // DEMO
+});
+
+api.interceptors.request.use((config) => {
+  const token = useAuthStore.getState().accessToken;
+
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
+  return config;
+});
+
+interface RetryableConfig extends InternalAxiosRequestConfig {
+  _retry?: boolean;
+}
+
+let isRefreshing = false;
+let refreshWaiters: ((token: string | null) => void)[] = [];
+
+const resolveWaiters = (token: string | null) => {
+  refreshWaiters.forEach((resolve) => resolve(token));
+  refreshWaiters = [];
+};
+
+// Routes whose own 401s are a final answer (bad credentials, etc.), not an
+// expired session — so they should never trigger a refresh-and-retry.
+const NO_REFRESH_RETRY_PATTERNS = ["/session/", "/login", "/register"];
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error: AxiosError) => {
+    const originalRequest = error.config as RetryableConfig | undefined;
+    const skipRefreshRetry = NO_REFRESH_RETRY_PATTERNS.some((pattern) =>
+      originalRequest?.url?.includes(pattern)
+    );
+
+    if (
+      error.response?.status !== 401 ||
+      !originalRequest ||
+      originalRequest._retry ||
+      skipRefreshRetry
+    ) {
+      return Promise.reject(error);
+    }
+
+    const { setAccessToken, logout, accessToken, isHydrated } = useAuthStore.getState();
+
+    // A guest on a public page (product, store) has no session to refresh
+    // or expire - just fail the request instead of showing "session expired".
+    if (isHydrated && !accessToken) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    // No refresh token to check client-side anymore — it's an httpOnly
+    // cookie the browser attaches on its own. If there isn't a valid one,
+    // the refresh call below simply 401s and we log out in the catch.
+    if (isRefreshing) {
+      const token = await new Promise<string | null>((resolve) => {
+        refreshWaiters.push(resolve);
+      });
+
+      if (!token) {
+        return Promise.reject(error);
+      }
+
+      originalRequest.headers.Authorization = `Bearer ${token}`;
+      return api(originalRequest);
+    }
+
+    isRefreshing = true;
+
+    try {
+      const { data } = await refreshSession();
+      setAccessToken(data.accessToken);
+      resolveWaiters(data.accessToken);
+
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
+      return api(originalRequest);
+    } catch (refreshError) {
+      resolveWaiters(null);
+      logout();
+
+      // Guard against redirecting to where we already are — without this,
+      // any unauthenticated request made from the login page itself (e.g. a
+      // component that queries a protected endpoint unconditionally) would
+      // reject, fail to refresh, and reload the same page forever.
+      const currentPath =
+        typeof window !== "undefined" ? window.location.pathname : "";
+
+      if (currentPath !== "/login" && currentPath !== "/session-expired") {
+        // Carry the page the user was on through session-expired -> login,
+        // so logging back in drops them back where they left off instead
+        // of always landing on the dashboard.
+        const returnTo =
+          typeof window !== "undefined"
+            ? window.location.pathname + window.location.search
+            : "";
+
+        // A full page load on purpose: this runs outside React (no router),
+        // and a hard reload also clears everything held in memory for the
+        // expired session.
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = `/session-expired?returnTo=${encodeURIComponent(returnTo)}`;
+      }
+
+      // Reject with the original error (e.g. the 403/401 the caller's own
+      // request produced), not the refresh endpoint's error — so any
+      // caller-side error handling reflects what it actually asked for.
+      return Promise.reject(error);
+    } finally {
+      isRefreshing = false;
+    }
+  }
+);
