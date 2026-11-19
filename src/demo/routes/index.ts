@@ -7,3 +7,4 @@ import "./chat";
 import "./checkout";
 import "./seller";
 import "./links";
+import "./admin";

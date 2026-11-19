@@ -24,7 +24,7 @@ const KEEP = new Set(["src/demo", "demo-overlay", "scripts", "public/demo", ".gi
 const copyDir = (from, to, rel = "") => {
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {
     const relPath = path.posix.join(rel, entry.name);
-    if (KEEP.has(relPath) || /^\.env/.test(entry.name) || ["AGENTS.md", "CLAUDE.md", ".git", "node_modules", ".next"].includes(entry.name)) continue;
+    if (KEEP.has(relPath) || /^\.env/.test(entry.name) || ["AGENTS.md", "CLAUDE.md", "DEPLOYMENT.md", ".git", "node_modules", ".next"].includes(entry.name)) continue;
     const src = path.join(from, entry.name);
     const dst = path.join(to, entry.name);
     if (entry.isDirectory()) {

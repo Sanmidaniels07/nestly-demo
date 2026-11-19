@@ -47,7 +47,7 @@ export interface DemoDB {
 }
 
 const KEY = "nestly-demo:db";
-export const DB_VERSION = 1;
+export const DB_VERSION = 2;
 
 let db: DemoDB | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

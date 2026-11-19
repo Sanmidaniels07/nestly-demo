@@ -317,7 +317,8 @@ export const sellerOrderView = (db: DemoDB, o: Row, storeId: string) => {
     ...o,
     user: { id: buyer?.id, name: buyer?.name, avatar: buyer?.avatar },
     address: o.address ? { fullName: o.address.fullName, address: o.address.address, city: o.address.city, state: o.address.state, country: o.address.country, postalCode: null, latitude: o.address.latitude, longitude: o.address.longitude } : null,
-    shipping: o.shipping.filter((s: Row) => s.storeId === storeId).map(({ deliveryCode, deliveryCodeAttempts, ...rest }: Row) => rest),
+    // Never the buyer's delivery code.
+    shipping: o.shipping.filter((s: Row) => s.storeId === storeId).map((s: Row) => Object.fromEntries(Object.entries(s).filter(([k]) => k !== "deliveryCode" && k !== "deliveryCodeAttempts"))),
     sellerNotes: o.sellerNotes.filter((n: Row) => n.storeId === storeId),
     items: o.items
       .filter((i: Row) => productById(db, i.productId)?.storeId === storeId)

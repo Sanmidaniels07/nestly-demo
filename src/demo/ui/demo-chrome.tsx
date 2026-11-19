@@ -5,13 +5,17 @@
 // nothing here is real.
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronUp, Home, RotateCcw, Sparkles, X } from "lucide-react";
+import { ChevronUp, Home, Play, RotateCcw, Sparkles, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
 import { resetDB } from "../db";
 import { hardNavigate } from "../navigate";
 import { getPersonaUserId, PERSONAS, setPersonaUserId, type PersonaKey } from "../persona";
+import { writeTour } from "../tour/engine";
+import { STORIES } from "../tour/stories";
+import TourLayer from "../tour/tour-layer";
+import ActivityToasts from "./activity-toasts";
 
 export default function DemoChrome() {
   const pathname = usePathname();
@@ -26,12 +30,26 @@ export default function DemoChrome() {
   if (pathname === "/") return null;
   const current = (Object.keys(PERSONAS) as PersonaKey[]).find((k) => PERSONAS[k].userId === me);
 
+  const playStory = (id: string) => {
+    const story = STORIES.find((s) => s.id === id)!;
+    setOpen(false);
+    writeTour({ storyId: id, step: 0 });
+    // Another character's story: become them first.
+    if (story.persona !== current) {
+      setPersonaUserId(PERSONAS[story.persona].userId);
+      hardNavigate(story.steps[0].path ?? PERSONAS[story.persona].start);
+    }
+  };
+
   const become = (k: PersonaKey) => {
     setPersonaUserId(PERSONAS[k].userId);
     hardNavigate(PERSONAS[k].start);
   };
 
   return (
+    <>
+    <TourLayer />
+    <ActivityToasts />
     <div className="pointer-events-none fixed bottom-[86px] left-3 z-[900] flex flex-col items-start sm:bottom-5 sm:left-1/2 sm:-translate-x-1/2 sm:items-center">
       <AnimatePresence>
         {open && (
@@ -67,6 +85,25 @@ export default function DemoChrome() {
                     {PERSONAS[k].name}
                     <span className="text-[10px] font-normal text-white/50">{PERSONAS[k].role}</span>
                   </motion.button>
+                ))}
+              </div>
+              <p className="mt-4 px-1 text-[11px] font-semibold uppercase tracking-wider text-white/45">Guided stories</p>
+              <div className="mt-2 space-y-1.5">
+                {STORIES.map((story) => (
+                  <button
+                    key={story.id}
+                    type="button"
+                    onClick={() => playStory(story.id)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-white/[0.06]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={`/demo/people/${story.who}.svg`} alt="" className="h-8 w-8 rounded-full" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[12.5px] font-semibold">{story.title}</span>
+                      <span className="block text-[10.5px] text-white/45">{PERSONAS[story.persona].name} · {story.minutes} min</span>
+                    </span>
+                    <Play size={14} className="shrink-0 text-violet-300" />
+                  </button>
                 ))}
               </div>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -120,5 +157,6 @@ export default function DemoChrome() {
         <ChevronUp size={14} className={`transition-transform ${open ? "" : "rotate-180"}`} />
       </motion.button>
     </div>
+    </>
   );
 }

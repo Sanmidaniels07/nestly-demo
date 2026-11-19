@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import { resetDB } from "../db";
 import { hardNavigate } from "../navigate";
 import { PERSONAS, setPersonaUserId, type PersonaKey } from "../persona";
+import { offerStoriesFor } from "../tour/tour-layer";
 
 const FLOATERS = [
   { img: "1578985545062-69928b1d9587", title: "Chocolate Drip Cake", price: "₦32,000", x: "6%", y: "16%", r: -8, d: 0 },
@@ -109,6 +110,7 @@ export default function StartPage() {
     if (picked) return;
     setPicked(k);
     setPersonaUserId(PERSONAS[k].userId);
+    offerStoriesFor(k);
     setTimeout(() => {
       // A full load, so the app starts signed in as this person.
       hardNavigate(PERSONAS[k].start);

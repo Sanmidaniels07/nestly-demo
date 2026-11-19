@@ -159,12 +159,13 @@ export const buildSeed = (): DemoDB => {
       userId: `u_${owner}`,
       status: "APPROVED",
       statusReason: null,
-      statusUpdatedAt: ago(70 - i),
+      // Ngozi opened with quick start a few hours ago and is waiting for review.
+      statusUpdatedAt: key === "ngozi" ? ago(0, 5) : ago(70 - i),
       cacNumber: verified ? `RC${1200000 + i * 7311}` : null,
       cacCompanyType: verified ? "BUSINESS_NAME" : null,
       isVerified: verified,
       businessName: name,
-      createdAt: ago(75 - i),
+      createdAt: key === "ngozi" ? ago(0, 5) : ago(75 - i),
     });
     stores.push({
       id: storeId,
@@ -190,9 +191,15 @@ export const buildSeed = (): DemoDB => {
       shippingPolicy: "We deliver within 24-48 hours. Pickup is free.",
       warrantyPolicy: key === "emeka" ? "6-month warranty on all gadgets." : null,
       referralCode: key.toUpperCase().slice(0, 4) + "2026",
+      // A made-up payout account (Ngozi, the new store, hasn't added one yet).
+      paystackSubaccountCode: key === "ngozi" ? null : `ACCT_demo${key}`,
+      payoutBankName: key === "ngozi" ? null : "GTBank",
+      payoutAccountNumber: key === "ngozi" ? null : `01234${String(48210 + i).slice(-5)}`,
+      payoutAccountName: key === "ngozi" ? null : name.toUpperCase(),
+      payoutAccountUpdatedAt: null,
       instagram: owner === "tola" ? "tolabakes" : null,
       whatsapp: "08030000000",
-      createdAt: ago(70 - i),
+      createdAt: key === "ngozi" ? ago(0, 5) : ago(70 - i),
     });
     const lagos = state === "Lagos";
     shippingOptions.push({ id: `so_${key}_pickup`, ...LAGOS_PICKUP(storeId, address), isArchived: false, createdAt: ago(60), updatedAt: ago(60) });
@@ -316,7 +323,7 @@ export const buildSeed = (): DemoDB => {
   ];
 
   return {
-    version: 1,
+    version: 2,
     users,
     sellers,
     stores,
