@@ -128,7 +128,7 @@ interface NewOrder {
   createdAt?: string;
 }
 
-export const createOrder = (db: DemoDB, input: NewOrder) => {
+export const createOrder = (db: DemoDB, input: NewOrder): Row => {
   const id = newId();
   const createdAt = input.createdAt ?? now();
   const items = input.lines.map((line) => {
@@ -278,7 +278,7 @@ export const advanceItem = (db: DemoDB, order: Row, item: Row, status: string, a
 
 const RETURN_DAYS = 3;
 
-export const orderView = (db: DemoDB, o: Row) => {
+export const orderView = (db: DemoDB, o: Row): Row => {
   const at = (type: string) => o.events.find((e: Row) => e.type === type)?.createdAt ?? null;
   const reached = STEPS.indexOf(o.status);
   const timeline = STEPS.map((step, i) => ({

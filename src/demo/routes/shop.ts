@@ -106,7 +106,7 @@ route("GET /users/:id/wishlist", ({ params, query }) => {
 route("GET /orders", (ctx) => {
   const user = needUser(ctx);
   const db = getDB();
-  let mine = db.orders.filter((o) => o.userId === user.id && o.status !== "PENDING");
+  let mine = db.orders.filter((o) => o.userId === user.id && o.status !== "PENDING").sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   if (ctx.query.status) mine = mine.filter((o) => o.status === ctx.query.status);
   return ok(paginate(mine.map((o) => orderView(db, o)), ctx.query, "orders"));
 });

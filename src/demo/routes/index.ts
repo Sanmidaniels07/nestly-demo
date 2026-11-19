@@ -5,3 +5,5 @@ import "./shop";
 import "./social";
 import "./chat";
 import "./checkout";
+import "./seller";
+import "./links";
