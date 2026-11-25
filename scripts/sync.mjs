@@ -19,7 +19,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const website = process.env.NESTLY_WEBSITE ?? path.resolve(root, "../social-media-market/social-marketplace-app");
 const pull = process.argv.includes("--pull");
 
-const KEEP = new Set(["src/demo", "demo-overlay", "scripts", "public/demo", ".git", "node_modules", ".next", ".env", ".env.local", "README.md", "DEMO.md", "package.json", "package-lock.json"]);
+// The demo's own files - never overwritten by the website (its .gitignore keeps
+// agent notes out of git, tsconfig/eslint leave demo-overlay and scripts alone).
+const KEEP = new Set(["src/demo", "demo-overlay", "scripts", "public/demo", ".git", "node_modules", ".next", ".env", ".env.local", "README.md", "DEMO.md", "package.json", "package-lock.json", ".gitignore", "tsconfig.json", "eslint.config.mjs", "AGENTS.md", "CLAUDE.md", "DEPLOYMENT.md"]);
 
 const copyDir = (from, to, rel = "") => {
   for (const entry of fs.readdirSync(from, { withFileTypes: true })) {

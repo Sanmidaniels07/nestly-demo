@@ -8,8 +8,9 @@ A sandbox of [Nestly](https://www.nestlyapp.site) that anyone can try in their b
 
 - **Start screen** (`/`): an animated stage. Pick Tola (seller) or Ada (shopper). The chosen card grows into the app.
 - **Guided stories**, told by the characters with a moving spotlight, speech bubbles, live activity cards and confetti:
-  - *From a DM to a paid order* (Tola): a payment link, Kunle pays, shipping, the delivery code, earnings.
-  - *Shop safely, then chip in* (Ada): add to cart, checkout, the demo payment sheet, then chipping in on Tolu's birthday cake.
+  - *From a DM to a paid order* (Tola): a pay link (Products → Pay links), Kunle pays, shipping, the delivery code, Money.
+  - *One link for a few products* (Tola): her "Weekend treats" collection and what buyers see at `/c/tolas-cakes/weekend-treats`, in her pink brand colour.
+  - *Shop safely, then chip in* (Ada): add to cart, the one-page checkout, the demo payment sheet, then chipping in on Tolu's birthday cake.
   - *Keep Nestly safe* (Yusuf, the admin): reviewing a brand-new quick-start shop. **Partners only** - see below.
 - **Free roam**: every screen works and keeps changes until "Reset demo". Messages get typed replies, paid orders are prepared and shipped on their own, and new orders, payments and deliveries slide in as cards.
 - **Demo button** (bottom of every screen): switch character, play a story, reset, or go back to the start.
@@ -65,7 +66,7 @@ npm run sync:pull  # copy the latest website code in, then apply the demo layer
 npm run sync       # only re-apply the demo layer
 ```
 
-The sync copies the website (never `src/demo`, `demo-overlay`, `scripts`, `public/demo`, this README or `.env`), lays `demo-overlay/` on top and makes five small injections: the adapter on axios, the demo controls in the layout, and no navbar on the start screen. If the website changed around an injection, the script stops and says where.
+The sync copies the website (never `src/demo`, `demo-overlay`, `scripts`, `public/demo`, this README, `.env`, or the demo's own `.gitignore`, `tsconfig.json` and `eslint.config.mjs`), lays `demo-overlay/` on top and makes five small injections: the adapter on axios, the demo controls in the layout, and no navbar on the start screen. If the website changed around an injection, the script stops and says where.
 
 After a sync, run the app and watch the console for `no handler yet` warnings: those are new API calls the demo needs to answer (add them in `src/demo/routes/`).
 

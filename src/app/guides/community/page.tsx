@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import GuideDocument, { GuidePart } from "@/src/components/guides/guide-document";
 import { MIN_AGE } from "@/src/lib/legal";
 import { OG_IMAGE } from "@/src/lib/site";
+import { featureOn } from "@/src/lib/features";
 
 export const metadata: Metadata = {
   title: "Community guide - get started on Nestly",
   description:
-    "Step by step: create your profile, follow people, post and share stories, message, join communities and events, celebrate birthdays and stay safe on Nestly.",
+    "Step by step: create your profile, follow people, post and share stories, message, shop, celebrate birthdays and stay safe on Nestly.",
   alternates: { canonical: "/guides/community" },
   openGraph: { title: "Getting started on Nestly", url: "/guides/community", images: [OG_IMAGE] },
 };
@@ -30,7 +31,7 @@ const parts: GuidePart[] = [
       {
         id: "profile",
         title: "Make your profile yours",
-        where: { label: "Settings → Profile", href: "/settings/profile" },
+        where: { label: "Me → Settings → Profile", href: "/settings/profile" },
         body: (
           <p>
             Pick a <strong>username</strong>, add a profile photo and cover, a short bio, your location and work, and the things you&apos;re into.
@@ -56,7 +57,7 @@ const parts: GuidePart[] = [
       {
         id: "post",
         title: "Post to your feed",
-        where: { label: "Feed → What's happening today?", href: "/feed" },
+        where: { label: "Shop → Feed → What's happening today?", href: "/feed" },
         body: (
           <p>
             Write up to 2,000 characters, add up to 10 photos or videos, and use <strong>#hashtags</strong> so people can find your post - tap any
@@ -125,13 +126,13 @@ const parts: GuidePart[] = [
       {
         id: "notifications",
         title: "Choose your notifications",
-        where: { label: "Settings → Notifications", href: "/settings/notifications" },
+        where: { label: "Me → Settings → Notifications", href: "/settings/notifications" },
         body: <p>Turn notifications on or off for likes, comments, new followers, messages, marketplace orders and announcements.</p>,
       },
       {
         id: "security",
         title: "Secure your account",
-        where: { label: "Settings → Security", href: "/settings/security" },
+        where: { label: "Me → Settings → Security", href: "/settings/security" },
         body: (
           <p>
             Turn on <strong>two-factor authentication</strong> with an authenticator app, and check <strong>Active sessions</strong> under Account to
@@ -152,7 +153,7 @@ const parts: GuidePart[] = [
       {
         id: "control",
         title: "Make it comfortable",
-        where: { label: "Settings → Appearance / Account", href: "/settings/appearance" },
+        where: { label: "Me → Settings → Appearance / Account", href: "/settings/appearance" },
         body: (
           <p>
             Choose light, dark or match your phone under Appearance. You can change your password - or permanently delete your account - under
@@ -170,7 +171,10 @@ export default function CommunityGuidePage() {
       current="/guides/community"
       title="Get started on Nestly"
       intro={<p>Nestly is where your people, your moments and your favourite sellers come together. Here&apos;s how to make the most of it.</p>}
-      parts={parts}
+      parts={parts.map((part) => ({
+        ...part,
+        steps: part.steps.filter((step) => (step.id !== "communities" || featureOn.communities) && (step.id !== "events" || featureOn.events)),
+      }))}
       finish={{ label: "Join Nestly", href: "/signup" }}
     />
   );

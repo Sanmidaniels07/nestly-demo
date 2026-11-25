@@ -9,10 +9,12 @@ import { useAuthStore } from "../store/auth-store";
 import {
   claimGuestAccount,
   confirmGuestDelivery,
+  declineGuestAccount,
   createPaymentLink,
   deletePaymentLink,
   getGuestOrder,
   getMyPaymentLinks,
+  getProductPayLink,
   getPaymentLink,
   guestPayPaymentLink,
   payPaymentLink,
@@ -47,6 +49,15 @@ export const useCreatePaymentLink = () => {
     mutationFn: createPaymentLink,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_LINKS }),
     onError: (error) => toast.error(errorMessage(error, "Couldn't create the link")),
+  });
+};
+
+// "Share pay link" on a product. Errors are shown by the caller (inline).
+export const useProductPayLink = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Awaited<ReturnType<typeof getProductPayLink>>, AxiosError<ApiErrorResponse>, string>({
+    mutationFn: getProductPayLink,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: MY_LINKS }),
   });
 };
 
@@ -159,3 +170,12 @@ export const usePayPaymentLink = () =>
     mutationFn: ({ code, data }) => payPaymentLink(code, data),
     onError: (error) => toast.error(errorMessage(error, "Couldn't start the payment")),
   });
+
+// "No thanks" to the account offer after checkout.
+export const useDeclineGuestAccount = (token: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<Awaited<ReturnType<typeof declineGuestAccount>>, AxiosError<ApiErrorResponse>, void>({
+    mutationFn: () => declineGuestAccount(token),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: guestOrderKey(token) }),
+  });
+};

@@ -23,6 +23,12 @@ export const createPaymentLink = async (data: PaymentLinkPayload) => {
   return response.data;
 };
 
+// The pay link for a product in the shop - made the first time, reused after.
+export const getProductPayLink = async (productId: string) => {
+  const response = await api.post<ApiResponse<PaymentLink>>(`/payment-links/from-product/${encodeURIComponent(productId)}`);
+  return response.data;
+};
+
 export const updatePaymentLink = async (id: string, data: UpdatePaymentLinkPayload) => {
   const response = await api.patch<ApiResponse<PaymentLink>>(`/payment-links/${id}`, data);
   return response.data;
@@ -71,6 +77,12 @@ export const confirmGuestDelivery = async (token: string, orderItemId: string) =
   const response = await api.post<ApiResponse<GuestOrder>>(
     `${guestOrderPath(token)}/items/${encodeURIComponent(orderItemId)}/confirm-delivery`
   );
+  return response.data;
+};
+
+// "No thanks" to making an account (recorded for the admin's guest list).
+export const declineGuestAccount = async (token: string) => {
+  const response = await api.post<ApiResponse<null>>(`${guestOrderPath(token)}/decline-account`);
   return response.data;
 };
 

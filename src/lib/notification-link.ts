@@ -35,7 +35,7 @@ export function targetHref(notification: Pick<Notification, "targetType" | "targ
     case "SELLER_SETUP":
       return "/settings/marketplace";
     case "PROFILE_SETUP":
-      return "/dashboard?checklist=1";
+      return "/me?checklist=1";
     case "CAC_REMINDER":
       return "/settings/marketplace?cac=1";
     case "ADMIN_PAYOUT_ACCOUNT_CHANGED":
@@ -70,6 +70,8 @@ export function targetHref(notification: Pick<Notification, "targetType" | "targ
       return notification.targetId
         ? `/settings/marketplace?tab=orders&order=${notification.targetId}`
         : "/settings/marketplace?tab=orders";
+    case "WELCOME_BACK":
+      return notification.targetId === "seller" ? "/settings/marketplace" : "/marketplace";
     default:
       return null;
   }

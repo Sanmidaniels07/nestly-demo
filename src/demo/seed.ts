@@ -198,6 +198,8 @@ export const buildSeed = (): DemoDB => {
       payoutAccountName: key === "ngozi" ? null : name.toUpperCase(),
       payoutAccountUpdatedAt: null,
       instagram: owner === "tola" ? "tolabakes" : null,
+      // Tola's shop shows off brand colours (her pink, shaded where needed).
+      brandColor: key === "tola" ? "#db2777" : null,
       whatsapp: "08030000000",
       createdAt: key === "ngozi" ? ago(0, 5) : ago(70 - i),
     });
@@ -353,6 +355,19 @@ export const buildSeed = (): DemoDB => {
     feedAreas: [],
     payouts: [],
     payments: [],
+    collections: [
+      {
+        id: "col_tola_weekend",
+        storeId: "st_tola",
+        name: "Weekend treats",
+        slug: "weekend-treats",
+        description: "Cupcakes and parfaits for the weekend - order by Friday.",
+        isActive: true,
+        productIds: ["p_004", "p_005", "p_007"],
+        createdAt: ago(3),
+        updatedAt: ago(3),
+      },
+    ],
   };
 };
 
