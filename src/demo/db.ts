@@ -44,10 +44,12 @@ export interface DemoDB {
   payouts: Row[];
   /** Paystack-style references of payments started, waiting for the fake checkout. */
   payments: Row[];
+  /** Sellers' product collections (added later - older saved demos don't have it yet). */
+  collections?: Row[];
 }
 
 const KEY = "nestly-demo:db";
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 let db: DemoDB | null = null;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;

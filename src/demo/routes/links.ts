@@ -54,7 +54,11 @@ const publicLink = (db: DemoDB, link: Row, viewerId?: string) => {
     isOwner: viewerId === ownerId,
     reserved: !!link.buyerId,
     reservedForViewer: !!viewerId && viewerId === link.buyerId,
-    store: { id: store.id, name: store.name, slug: store.slug, address: store.address, logo: store.logo, city: store.city, state: store.state, isVerified: store.isVerified, rating: store.rating, sellerUserId: ownerId },
+    store: { id: store.id, name: store.name, slug: store.slug, address: store.address, logo: store.logo, brandColor: store.brandColor ?? null, city: store.city, state: store.state, isVerified: store.isVerified, rating: store.rating, sellerUserId: ownerId },
+    // Shared from the shop: the real listing.
+    productId: link.fromListing ? p.id : null,
+    options: p.options ?? [],
+    variations: (p.variations ?? []).filter((v: Row) => !v.isArchived),
     createdAt: link.createdAt,
   };
 };
@@ -132,6 +136,22 @@ route("DELETE /payment-links/:id", (ctx) => {
   const link = getDB().paymentLinks.find((l) => l.id === ctx.params.id && l.storeId === store.id);
   if (link) Object.assign(link, { isArchived: true, isActive: false });
   return ok(null, "Payment link removed");
+});
+
+// "Share pay link" on a listed product: one link per product, pointing at
+// the listing itself (its price, options and stock).
+route("POST /payment-links/from-product/:productId", (ctx) => {
+  const { store } = sellerStore(ctx);
+  const db = getDB();
+  const p = productById(db, ctx.params.productId);
+  if (!p || p.storeId !== store.id) return fail(404, "Product not found.");
+  if (p.status !== "PUBLISHED") return fail(400, "Publish the product first - only products in your shop can have a pay link.");
+  let link = db.paymentLinks.find((l) => l.productId === p.id && l.fromListing);
+  if (!link) {
+    link = { id: newId(), code: shortCode(8), storeId: store.id, productId: p.id, deliveryType: "STORE_OPTIONS", deliveryFee: 0, isActive: true, isArchived: false, buyerId: null, fromListing: true, createdAt: now(), updatedAt: now() };
+    db.paymentLinks.unshift(link);
+  } else Object.assign(link, { isActive: true, isArchived: false, updatedAt: now() });
+  return ok({ ...forSeller(db, link), fromListing: true, productId: p.id, productStatus: p.status }, "Pay link ready");
 });
 
 const liveLink = (code: string) => {

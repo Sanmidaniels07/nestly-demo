@@ -30,10 +30,16 @@ const sellerDmToPaid: Story = {
       body: "I bake celebration cakes in Lekki. Most of my customers find me on Instagram - let me show you how Nestly turns their DMs into paid orders, with no fake alerts.",
     },
     {
-      target: { text: /^Payment links$/ },
+      target: { selector: "nav[aria-label='Seller Hub'] button", text: /^Products$/ },
       advance: "click",
       title: "Kunle wants a cake",
-      body: "He messaged me on Instagram. Instead of \"send to my account\", I make a Nestly payment link. Tap Payment links.",
+      body: "He messaged me on Instagram. Instead of \"send to my account\", I make a Nestly pay link. They live under Products - tap Products.",
+    },
+    {
+      target: { selector: "nav[aria-label='Seller Hub'] [role=tab]", text: /^Pay links$/ },
+      advance: "click",
+      title: "Then Pay links",
+      body: "Tap Pay links.",
     },
     {
       run: async () => {
@@ -85,7 +91,7 @@ const sellerDmToPaid: Story = {
       body: "₦35,000, paid by card. Nestly holds it - not me, not Kunle - until he has his cake. He gets a private delivery code; I get a new order.",
     },
     {
-      target: { text: /^Orders$/ },
+      target: { selector: "nav[aria-label='Seller Hub'] button", text: /^Orders$/ },
       advance: "click",
       title: "Let's open the order",
       body: "Tap Orders.",
@@ -122,10 +128,10 @@ const sellerDmToPaid: Story = {
       body: "At my door, I check the cake, then give the rider my 6-digit code. That code is the only thing that confirms delivery - no code, no payout.",
     },
     {
-      target: { text: /^Earnings$/ },
+      target: { selector: "nav[aria-label='Seller Hub'] button", text: /^Money$/ },
       advance: "click",
       title: "Delivered = paid",
-      body: "Tap Earnings to see the money coming to my bank.",
+      body: "Tap Money to see it coming to my bank.",
     },
     {
       delay: 800,
@@ -172,16 +178,10 @@ const buyerShopSafely: Story = {
       delay: 900,
     },
     {
-      target: { text: /^Proceed to payment$/ },
-      advance: "click",
-      title: "Almost there",
-      body: "Tap Proceed to payment.",
-    },
-    {
       target: { text: /^Pay ₦/ },
       advance: onPage("/marketplace/order-success"),
       title: "Pay through Nestly",
-      body: "The seller can't touch this money until I have my order. Tap Pay, then Pay in the payment sheet - it's all pretend here.",
+      body: "Everything's on one page. The seller can't touch this money until I have my order. Tap Pay, then Pay in the payment sheet - it's all pretend here.",
       delay: 700,
     },
     {
@@ -258,5 +258,44 @@ const adminReview: Story = {
   ],
 };
 
-export const STORIES: Story[] = [sellerDmToPaid, buyerShopSafely, adminReview];
+const sellerCollection: Story = {
+  id: "seller-collection",
+  persona: "seller",
+  title: "One link for a few products",
+  blurb: "Tola shares her weekend treats as one link - buyers pick what they want and pay once.",
+  minutes: 1,
+  who: "tola",
+  steps: [
+    {
+      path: "/settings/marketplace?tab=collections",
+      title: "Weekend treats, one link",
+      body: "Every Friday I post my weekend treats on WhatsApp Status. Instead of one link per item, I share a collection - a few of my products on one page.",
+      delay: 800,
+    },
+    {
+      target: { text: /^Weekend treats$/ },
+      title: "Here's mine",
+      body: "Three items, in the order I picked. My link is nestlyapp.site/tolas-cakes/weekend-treats - I copy it straight into my Status.",
+      delay: 600,
+    },
+    {
+      path: "/c/tolas-cakes/weekend-treats",
+      title: "What my customers see",
+      body: "Just these treats, with prices, in my shop's pink. They tap Add on what they want and set how many.",
+      delay: 1200,
+    },
+    {
+      target: { selector: "button", text: /^Check out$/ },
+      title: "One payment for everything",
+      body: "Then one Check out - with or without a Nestly account - and Nestly holds the money until they have their order. Stock goes down as they buy, like any order.",
+    },
+    {
+      celebrate: true,
+      title: "Make your own 🎉",
+      body: "In Seller Hub, go to Products, then Collections, then New collection. You can even add a brand-new product from there.",
+    },
+  ],
+};
+
+export const STORIES: Story[] = [sellerDmToPaid, sellerCollection, buyerShopSafely, adminReview];
 export const storyById = (id: string) => STORIES.find((s) => s.id === id) ?? null;

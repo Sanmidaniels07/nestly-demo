@@ -9,6 +9,8 @@ import { useBecomeSeller } from "@/src/hooks/use-become-seller";
 import { useCreateStore } from "@/src/hooks/use-create-store";
 import { useImageUpload } from "@/src/hooks/use-image-upload";
 import { useCountdown } from "@/src/hooks/use-countdown";
+import { useFormDraft } from "@/src/hooks/use-form-draft";
+import DraftRestoredNotice from "@/src/components/ui/draft-restored-notice";
 import Input from "@/src/components/ui/input";
 import Button from "@/src/components/ui/button";
 import { FormCardSkeleton } from "@/src/components/skeletons/form-card-skeleton";
@@ -134,29 +136,56 @@ function RejectedApplication({ seller }: { seller: SellerProfile }) {
   );
 }
 
+const EMPTY_STORE_FORM = {
+  name: "",
+  description: "",
+  email: "",
+  phone: "",
+  address: "",
+  city: "",
+  state: "",
+  country: "",
+  instagram: "",
+  whatsapp: "",
+  facebook: "",
+  tiktok: "",
+};
+
 function CreateStoreForm() {
   const router = useRouter();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    email: "",
-    phone: "",
-    address: "",
-    city: "",
-    state: "",
-    country: "",
-    instagram: "",
-    whatsapp: "",
-    facebook: "",
-    tiktok: "",
-  });
+  const [form, setForm] = useState(EMPTY_STORE_FORM);
   const [logo, setLogo] = useState<string>();
   const [banner, setBanner] = useState<string>();
 
-  const { mutate: uploadImage, isPending: isUploading } = useImageUpload();
+  // What they typed (and the uploaded logo/banner links) is kept in this
+  // browser (per account) until the store is created.
+  const { restored, clear: clearSaved, dismissNotice } = useFormDraft(
+    "store:create",
+    { form, logo: logo ?? null, banner: banner ?? null },
+    (saved) => {
+      setForm({ ...EMPTY_STORE_FORM, ...saved.form });
+      setLogo(saved.logo ?? undefined);
+      setBanner(saved.banner ?? undefined);
+    },
+    {
+      isEmpty: (value) =>
+        !value.logo && !value.banner && JSON.stringify(value.form) === JSON.stringify(EMPTY_STORE_FORM),
+    }
+  );
+
+  const startOver = () => {
+    setForm(EMPTY_STORE_FORM);
+    setLogo(undefined);
+    setBanner(undefined);
+    clearSaved();
+  };
+
+  // mutateAsync: mutate() only reports back for the latest call, so a logo
+  // picked while the banner was still uploading (or the reverse) got lost.
+  const { mutateAsync: uploadImage, isPending: isUploading } = useImageUpload();
   const { mutate: createStore, isPending: isCreating } = useCreateStore();
 
   const update = (field: keyof typeof form) => (
@@ -168,7 +197,7 @@ function CreateStoreForm() {
     onDone: (url: string) => void
   ) => {
     if (!file) return;
-    uploadImage(file, { onSuccess: onDone });
+    uploadImage(file).then(onDone).catch(() => {}); // the hook shows the error
   };
 
   const canSubmit = form.name.trim().length > 0 && !isCreating && !isUploading;
@@ -195,7 +224,12 @@ function CreateStoreForm() {
       },
       // replace, not push: Back from the dashboard shouldn't reopen a
       // completed setup form.
-      { onSuccess: () => router.replace("/settings/marketplace") }
+      {
+        onSuccess: () => {
+          clearSaved();
+          router.replace("/settings/marketplace");
+        },
+      }
     );
   };
 
@@ -207,6 +241,8 @@ function CreateStoreForm() {
       <p className="mt-2.5 text-[13.5px] text-muted">
         Tell buyers who you are. You can update this later.
       </p>
+
+      {restored && <DraftRestoredNotice what="the store details you entered" onStartOver={startOver} onDismiss={dismissNotice} className="mt-6" />}
 
       <div className="mt-8 grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">

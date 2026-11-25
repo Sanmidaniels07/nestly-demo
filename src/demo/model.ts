@@ -47,6 +47,7 @@ export const productDetail = (db: DemoDB, p: Row, viewerId?: string | null) => {
       name: store.name,
       slug: store.slug,
       logo: store.logo,
+      brandColor: store.brandColor ?? null,
       city: store.city,
       state: store.state,
       isVerified: store.isVerified,

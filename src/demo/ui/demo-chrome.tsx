@@ -29,6 +29,9 @@ export default function DemoChrome() {
   );
 
   if (pathname === "/") return null;
+  // Pages with their own bar at the bottom (a collection's total and Check
+  // out): sit above it so it stays readable.
+  const raised = pathname.startsWith("/c/");
   const current = (Object.keys(PERSONAS) as PersonaKey[]).find((k) => PERSONAS[k].userId === me);
 
   const playStory = (id: string) => {
@@ -51,7 +54,11 @@ export default function DemoChrome() {
     <>
     <TourLayer />
     <ActivityToasts />
-    <div className="pointer-events-none fixed bottom-[86px] left-3 z-[900] flex flex-col items-start sm:bottom-5 sm:left-1/2 sm:-translate-x-1/2 sm:items-center">
+    <div
+      className={`pointer-events-none fixed left-3 z-[900] flex flex-col items-start sm:left-1/2 sm:-translate-x-1/2 sm:items-center ${
+        raised ? "bottom-[180px] sm:bottom-28" : "bottom-[86px] sm:bottom-5"
+      }`}
+    >
       <AnimatePresence>
         {open && (
           <motion.div

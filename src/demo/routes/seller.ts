@@ -204,12 +204,21 @@ route("GET /stores/me", (ctx) => {
 route("PATCH /stores/:id", (ctx) => {
   const { user, store } = myStore(ctx);
   if (store.id !== ctx.params.id) return fail(403, "That's not your store.");
-  const allowed = ["name", "description", "logo", "banner", "address", "city", "state", "phone", "email", "instagram", "whatsapp", "facebook", "tiktok", "shippingPolicy", "warrantyPolicy"];
+  const allowed = ["name", "description", "logo", "banner", "address", "city", "state", "phone", "email", "instagram", "whatsapp", "facebook", "tiktok", "shippingPolicy", "warrantyPolicy", "brandColor"];
   for (const key of allowed) if (key in ctx.body) store[key] = ctx.body[key];
+  // Same as the API: "#73e" / "7C3AED" -> "#7c3aed"; blank = Nestly's colours.
+  if ("brandColor" in ctx.body) {
+    const hex = String(ctx.body.brandColor ?? "").trim().replace(/^#/, "").toLowerCase();
+    const full = hex.length === 3 ? hex.replace(/./g, (c) => c + c) : hex;
+    if (full && !/^[0-9a-f]{6}$/.test(full)) return fail(400, "Pick a colour, e.g. #7C3AED.");
+    store.brandColor = full ? `#${full}` : null;
+  }
   return ok(storeView(getDB(), store, user.id), "Store updated");
 });
 
 // ---- products ----
+route("GET /products/ai-draft/status", () => ok({ enabled: false, remainingToday: 0 }));
+
 route("GET /products/me", (ctx) => {
   const { store } = myStore(ctx);
   const db = getDB();

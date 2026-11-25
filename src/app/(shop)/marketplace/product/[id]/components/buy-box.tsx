@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Heart, ShieldCheck, Check, Gift } from "lucide-react";
+import { Heart, ShieldCheck, Check, Gift, Link2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { Product } from "@/src/types/product";
@@ -15,6 +15,11 @@ import NotifyMe from "./buy-box-components/notify-me";
 import { useRequireLogin } from "@/src/hooks/use-session";
 import ShareButton from "@/src/components/ui/share-button";
 import { SITE_URL } from "@/src/lib/site";
+import { useAuthStore } from "@/src/store/auth-store";
+import { useAuth } from "@/src/hooks/use-auth";
+import { useGuestCart } from "@/src/store/guest-cart-store";
+import toast from "react-hot-toast";
+import SharePayLinkDialog from "@/src/components/marketplace/share-pay-link-dialog";
 
 interface Props {
   product: Product;
@@ -37,6 +42,12 @@ export default function BuyBox({ product }: Props) {
   const { mutate: addToCart, isPending: isAdding } = useAddToCart();
   const requireLogin = useRequireLogin();
   const { isSaved: saved, toggle: toggleSaved } = useToggleWishlist(product.id);
+  // The seller looking at their own listing can share its pay link.
+  const currentUserId = useAuthStore((state) => state.user?.id);
+  const { isAuthenticated, isHydrated } = useAuth();
+  const addToGuestCart = useGuestCart((state) => state.add);
+  const isOwner = !!currentUserId && currentUserId === product.store?.sellerUserId;
+  const [sharingPayLink, setSharingPayLink] = useState(false);
 
   // Products with options (e.g. Size, Colour) are bought as one combination.
   const options = product.options ?? [];
@@ -75,6 +86,14 @@ export default function BuyBox({ product }: Props) {
 
   const handleAddToCart = () => {
     if (outOfStock || !choiceMade) return;
+    // No account: kept in this browser, paid for at guest checkout.
+    if (isHydrated && !isAuthenticated) {
+      addToGuestCart({ productId: product.id, variationId: match?.id ?? null, quantity });
+      toast.success("Added to cart");
+      setAdded(true);
+      setTimeout(() => setAdded(false), 2000);
+      return;
+    }
     if (!requireLogin("Log in or create a free account to buy from Nestly sellers.")) return;
 
     addToCart(
@@ -99,6 +118,13 @@ export default function BuyBox({ product }: Props) {
 
   const handleBuyNow = () => {
     if (outOfStock || !choiceMade) return;
+    // No account: straight to guest checkout with just this item.
+    if (isHydrated && !isAuthenticated) {
+      const params = new URLSearchParams({ product: product.id, qty: String(quantity) });
+      if (match?.id) params.set("variation", match.id);
+      router.push(`/checkout/guest?${params}`);
+      return;
+    }
     if (!requireLogin("Log in or create a free account to buy from Nestly sellers.")) return;
 
     addToCart(
@@ -229,6 +255,23 @@ export default function BuyBox({ product }: Props) {
           />
         </div>
       </div>
+
+      {isOwner && product.status === "PUBLISHED" && (
+        <div className="rounded-2xl border border-violet-200 bg-violet-50/60 p-4 dark:border-violet-500/30 dark:bg-violet-500/5">
+          <p className="text-[13px] font-semibold text-ink">Selling this on WhatsApp or Instagram?</p>
+          <p className="mt-0.5 text-[12px] leading-relaxed text-muted">Share a pay link - buyers pay straight away, no account needed.</p>
+          <button
+            type="button"
+            onClick={() => setSharingPayLink(true)}
+            className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 text-[13px] font-semibold text-white transition-all hover:brightness-110"
+          >
+            <Link2 size={15} /> Share pay link
+          </button>
+          {sharingPayLink && (
+            <SharePayLinkDialog productId={product.id} productTitle={product.title} onClose={() => setSharingPayLink(false)} />
+          )}
+        </div>
+      )}
 
       <PaymentMethods />
 
